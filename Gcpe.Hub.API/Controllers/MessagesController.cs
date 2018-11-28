@@ -78,7 +78,7 @@ namespace Gcpe.Hub.API.Controllers
                 {
                     return Ok(mapper.Map<Message, MessageViewModel>(message));
                 }
-                return NotFound();
+                return NotFound($"Message not found with id: {id}");
             }
             catch (Exception ex)
             {
@@ -96,13 +96,14 @@ namespace Gcpe.Hub.API.Controllers
         {
             try
             {
-                var oldMessage = dbContext.Message.Find(id);
-                if(oldMessage == null)
+                Message dbMessage = dbContext.Message.Find(id);
+                if (dbMessage == null)
                 {
                     return NotFound($"Message not found with id: {id}");
                 }
-                message.Id = id;
-                dbContext.Entry(oldMessage).CurrentValues.SetValues(mapper.Map<MessageViewModel, Message>(message));
+                dbMessage = mapper.Map(message, dbMessage);
+                dbContext.Message.Update(dbMessage);
+                
                 dbContext.SaveChanges();
                 return Ok(message);
             }

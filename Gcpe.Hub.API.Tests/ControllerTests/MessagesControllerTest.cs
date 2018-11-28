@@ -15,18 +15,19 @@ using Xunit;
 
 namespace Gcpe.Hub.API.Tests.ControllerTests
 {
-    public class MessagesControllerTests
+    public class MessagesControllerTests : IDisposable
     {
         private Mock<ILogger<MessagesController>> logger;
         private HubDbContext context;
         private IMapper mapper;
+        private DbContextOptions<HubDbContext> options;
 
         public MessagesControllerTests()
         {
-            var options = new DbContextOptionsBuilder<HubDbContext>()
+            this.options = new DbContextOptionsBuilder<HubDbContext>()
                       .UseInMemoryDatabase(Guid.NewGuid().ToString())
                       .Options;
-            this.context = new HubDbContext(options);
+            this.context = new HubDbContext(this.options);
 
             this.logger = new Mock<ILogger<MessagesController>>();
 
@@ -35,6 +36,10 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
                 cfg.AddProfile(new MappingProfile());
             });
             this.mapper = mockMapper.CreateMapper();
+        }
+        public void Dispose()
+        {
+            this.context.Dispose();
         }
 
         [Theory]
@@ -50,12 +55,11 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             context.SaveChanges();
             var controller = new MessagesController(context, logger.Object, mapper);
 
-            var result = controller.GetAll();
+            var result = controller.GetAll() as ObjectResult;
 
             result.Should().BeOfType<OkObjectResult>();
-            var okResult = result as OkObjectResult;
-            okResult.Should().NotBeNull();
-            var models = okResult.Value as ICollection<Message>;
+            result.Should().NotBeNull();
+            var models = result.Value as ICollection<Message>;
             models.Should().NotBeNull();
             models.Count().Should().Equals(messageCount);
         }
@@ -78,11 +82,10 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             context.SaveChanges();
             var controller = new MessagesController(context, logger.Object, mapper);
 
-            var result = controller.GetAll();
+            var result = controller.GetAll() as ObjectResult;
 
             result.Should().BeOfType<OkObjectResult>();
-            var okResult = result as OkObjectResult;
-            var models = okResult.Value as ICollection<Message>;
+            var models = result.Value as ICollection<Message>;
             models.Count().Should().Equals(publishedCount);
         }
 
@@ -104,11 +107,10 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             context.SaveChanges();
             var controller = new MessagesController(context, logger.Object, mapper);
 
-            var result = controller.GetAll(true);
+            var result = controller.GetAll(true) as ObjectResult;
 
             result.Should().BeOfType<OkObjectResult>();
-            var okResult = result as OkObjectResult;
-            var models = okResult.Value as ICollection<Message>;
+            var models = result.Value as ICollection<Message>;
             models.Count().Should().Equals(publishedCount);
         }
 
@@ -130,29 +132,24 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             context.SaveChanges();
             var controller = new MessagesController(context, logger.Object, mapper);
 
-            var result = controller.GetAll(false);
+            var result = controller.GetAll(false) as ObjectResult;
 
             result.Should().BeOfType<OkObjectResult>();
-            var okResult = result as OkObjectResult;
-            var models = okResult.Value as ICollection<Message>;
+            var models = result.Value as ICollection<Message>;
             models.Count().Should().Equals(unpublishedCount);
         }
 
         [Fact]
         public void GetAll_ShouldReturnBadRequest()
         {
-            var options = new DbContextOptionsBuilder<HubDbContext>()
-                      .UseInMemoryDatabase(Guid.NewGuid().ToString())
-                      .Options;
-            var mockContext = new Mock<HubDbContext>(options);
+            var mockContext = new Mock<HubDbContext>(this.options);
             mockContext.Setup(m => m.Message).Throws(new Exception());
             var controller = new MessagesController(mockContext.Object, logger.Object, mapper);
 
-            var result = controller.GetAll();
+            var result = controller.GetAll() as ObjectResult;
 
+            result.StatusCode.Should().Be(400);
             result.Should().BeOfType<BadRequestObjectResult>();
-            var badResult = result as BadRequestObjectResult;
-            badResult.StatusCode.Should().Be(400);
         }
 
         [Fact]
@@ -160,12 +157,11 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         {
             var controller = new MessagesController(context, logger.Object, mapper);
 
-            var result = controller.Post(mapper.Map<Message, MessageViewModel>(TestData.TestMessage("1")));
+            var result = controller.Post(mapper.Map<Message, MessageViewModel>(TestData.TestMessage("1"))) as ObjectResult;
 
+            result.StatusCode.Should().Equals(201);
             result.Should().BeOfType<CreatedAtRouteResult>();
-            var createdResult = result as CreatedAtRouteResult;
-            createdResult.StatusCode.Should().Equals(201);
-            var model = createdResult.Value as MessageViewModel;
+            var model = result.Value as MessageViewModel;
             model.Title.Should().Equals("2018MESSAGE-1");
         }
 
@@ -176,11 +172,10 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             controller.ModelState.AddModelError("error", "some validation error");
             var testMessage = TestData.TestMessage("1");
 
-            var result = controller.Post(message: null);
+            var result = controller.Post(message: null) as ObjectResult;
 
             result.Should().BeOfType<BadRequestObjectResult>();
-            var badResult = result as BadRequestObjectResult;
-            badResult.StatusCode.Should().Be(400);
+            result.StatusCode.Should().Be(400);
         }
 
         [Fact]
@@ -191,12 +186,11 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             context.Message.Add(testMessage);
             context.SaveChanges();
 
-            var result = controller.Get(testMessage.Id);
+            var result = controller.Get(testMessage.Id) as ObjectResult;
 
             result.Should().BeOfType<OkObjectResult>();
-            var okResult = result as OkObjectResult;
-            okResult.StatusCode.Should().Be(200);
-            var model = okResult.Value as MessageViewModel;
+            result.StatusCode.Should().Be(200);
+            var model = result.Value as MessageViewModel;
             model.Title.Should().Equals("2018MESSAGE-1");
         }
 
@@ -213,11 +207,10 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             context.Message.Add(testMessage);
             context.SaveChanges();
 
-            var result = controller.Get(testMessage.Id);
+            var result = controller.Get(testMessage.Id) as ObjectResult;
 
             result.Should().BeOfType<BadRequestObjectResult>();
-            var badResult = result as BadRequestObjectResult;
-            badResult.StatusCode.Should().Be(400);
+            result.StatusCode.Should().Be(400);
         }
 
         [Fact]
@@ -225,28 +218,29 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         {
             var controller = new MessagesController(context, logger.Object, mapper);
 
-            var result = controller.Get(Guid.NewGuid());
+            var result = controller.Get(Guid.NewGuid()) as ObjectResult;
 
-            result.Should().BeOfType<NotFoundResult>();
-            var notFoundResult = result as NotFoundResult;
-            notFoundResult.StatusCode.Should().Be(404);
+            result.Should().BeOfType<NotFoundObjectResult>();
+            result.StatusCode.Should().Be(404);
         }
         
         [Fact]
         public void Put_ShouldReturnSuccess()
         {
-            var controller = new MessagesController(context, logger.Object, mapper);
             var testMessage = TestData.TestMessage("1");
+
             context.Message.Add(testMessage);
             context.SaveChanges();
-            testMessage.Title = "New Title!";
+            var testMessageVM = mapper.Map<Message, MessageViewModel>(testMessage);
+            testMessageVM.Title = "New Title!";
 
-            var result = controller.Put(testMessage.Id, mapper.Map<Message, MessageViewModel>(testMessage));
+
+            var controller = new MessagesController(context, logger.Object, mapper);
+            var result = controller.Put(testMessage.Id, testMessageVM) as ObjectResult;
 
             result.Should().BeOfType<OkObjectResult>();
-            var okResult = result as OkObjectResult;
-            okResult.StatusCode.Should().Be(200);
-            var model = okResult.Value as MessageViewModel;
+            result.StatusCode.Should().Be(200);
+            var model = result.Value as MessageViewModel;
             model.Title.Should().Equals("New Title!");
             var dbMessage = context.Message.Find(testMessage.Id);
             dbMessage.Title.Should().Equals("New Title!");
@@ -260,11 +254,10 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             context.Message.Add(testMessage);
             context.SaveChanges();
 
-            var result = controller.Put(testMessage.Id, message: null);
+            var result = controller.Put(testMessage.Id, message: null) as ObjectResult ;
 
             result.Should().BeOfType<BadRequestObjectResult>();
-            var badResult = result as BadRequestObjectResult;
-            badResult.StatusCode.Should().Be(400);
+            result.StatusCode.Should().Be(400);
         }
 
         [Fact]
@@ -273,11 +266,10 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             var controller = new MessagesController(context, logger.Object, mapper);
             var testMessage = TestData.TestMessage("1");
 
-            var result = controller.Put(testMessage.Id, message: null);
+            var result = controller.Put(testMessage.Id, message: null) as ObjectResult;
 
             result.Should().BeOfType<NotFoundObjectResult>();
-            var notFoundResult = result as NotFoundObjectResult;
-            notFoundResult.StatusCode.Should().Be(404);
+            result.StatusCode.Should().Be(404);
         }
     }
 }
