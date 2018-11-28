@@ -64,8 +64,10 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             models.Count().Should().Equals(messageCount);
         }
 
-        [Fact]
-        public void GetAll_ShouldDefaultIsPublishedParameterTrue()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void GetAll_ShouldDefaultIsPublishedParameterTrue(bool isPublished)
         {
             var publishedCount = 3;
             var unpublishedCount = 2;
@@ -82,61 +84,11 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             context.SaveChanges();
             var controller = new MessagesController(context, logger.Object, mapper);
 
-            var result = controller.GetAll() as ObjectResult;
+            var result = controller.GetAll(isPublished) as ObjectResult;
 
             result.Should().BeOfType<OkObjectResult>();
             var models = result.Value as ICollection<Message>;
-            models.Count().Should().Equals(publishedCount);
-        }
-
-        [Fact]
-        public void GetAll_ShouldAcceptIsPublishedParameterTrue()
-        {
-            var publishedCount = 3;
-            var unpublishedCount = 2;
-            for (var i = 0; i < publishedCount; i++)
-            {
-                context.Message.Add(TestData.TestMessage($"published-{i.ToString()}"));
-            }
-            for (var i = 0; i < unpublishedCount; i++)
-            {
-                var testMessage = TestData.TestMessage($"unpublished-{i.ToString()}");
-                testMessage.IsPublished = false;
-                context.Message.Add(testMessage);
-            }
-            context.SaveChanges();
-            var controller = new MessagesController(context, logger.Object, mapper);
-
-            var result = controller.GetAll(true) as ObjectResult;
-
-            result.Should().BeOfType<OkObjectResult>();
-            var models = result.Value as ICollection<Message>;
-            models.Count().Should().Equals(publishedCount);
-        }
-
-        [Fact]
-        public void GetAll_ShouldAcceptIsPublishedParameterFalse()
-        {
-            var publishedCount = 3;
-            var unpublishedCount = 2;
-            for (var i = 0; i < publishedCount; i++)
-            {
-                context.Message.Add(TestData.TestMessage($"published-{i.ToString()}"));
-            }
-            for (var i = 0; i < unpublishedCount; i++)
-            {
-                var testMessage = TestData.TestMessage($"unpublished-{i.ToString()}");
-                testMessage.IsPublished = false;
-                context.Message.Add(testMessage);
-            }
-            context.SaveChanges();
-            var controller = new MessagesController(context, logger.Object, mapper);
-
-            var result = controller.GetAll(false) as ObjectResult;
-
-            result.Should().BeOfType<OkObjectResult>();
-            var models = result.Value as ICollection<Message>;
-            models.Count().Should().Equals(unpublishedCount);
+            models.Count().Should().Equals(isPublished ? publishedCount : unpublishedCount);
         }
 
         [Fact]
