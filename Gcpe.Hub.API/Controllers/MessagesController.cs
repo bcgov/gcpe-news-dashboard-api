@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using AutoMapper;
 using Gcpe.Hub.API.ViewModels;
 using Gcpe.Hub.Data.Entity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Gcpe.Hub.API.ViewModels;
-using Gcpe.Hub.API.Helpers;
 
 namespace Gcpe.Hub.API.Controllers
 {
@@ -48,14 +47,19 @@ namespace Gcpe.Hub.API.Controllers
         [HttpPost]
         [ProducesResponseType(201)]
         [ProducesResponseType(400)]
-        public IActionResult Post(MessageViewModel message)
+        public IActionResult Post(MessageViewModel messageVM)
         {
             try
             {
+                if (messageVM.Id != Guid.Empty)
+                {
+                    throw new ValidationException("Invalid parameter (id)");
+                }
+                var message = mapper.Map<MessageViewModel, Message>(messageVM);
                 message.Id = Guid.NewGuid();
-                dbContext.Message.Add(mapper.Map<MessageViewModel, Message>(message));
+                dbContext.Message.Add(message);
                 dbContext.SaveChanges();
-                return CreatedAtRoute("GetMessage", new { id = message.Id }, message);
+                return CreatedAtRoute("GetMessage", new { id = message.Id }, mapper.Map<Message, MessageViewModel>(message));
             }
             catch (Exception ex)
             {
@@ -92,20 +96,23 @@ namespace Gcpe.Hub.API.Controllers
         [ProducesResponseType(200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        public IActionResult Put(Guid id, MessageViewModel message)
+        public IActionResult Put(Guid id, MessageViewModel messageVM)
         {
             try
             {
                 Message dbMessage = dbContext.Message.Find(id);
-                if (dbMessage == null)
+                if (dbMessage != null)
                 {
-                    return NotFound($"Message not found with id: {id}");
+                    dbMessage = mapper.Map(messageVM, dbMessage);
+                    dbMessage.Timestamp = DateTime.Now;
+                    dbMessage.Id = id;
+                    dbContext.Message.Update(dbMessage);
+
+                    dbContext.SaveChanges();
+                    return Ok(messageVM);
                 }
-                dbMessage = mapper.Map(message, dbMessage);
-                dbContext.Message.Update(dbMessage);
+                return NotFound($"Message not found with id: {id}");
                 
-                dbContext.SaveChanges();
-                return Ok(message);
             }
             catch (Exception ex)
             {

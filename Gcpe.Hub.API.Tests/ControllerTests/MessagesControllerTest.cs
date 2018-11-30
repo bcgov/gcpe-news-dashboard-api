@@ -108,8 +108,10 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         public void Post_ShouldReturnSuccess()
         {
             var controller = new MessagesController(context, logger.Object, mapper);
+            var testMessage = TestData.TestMessage("1");
+            testMessage.Id = Guid.Empty;
 
-            var result = controller.Post(mapper.Map<Message, MessageViewModel>(TestData.TestMessage("1"))) as ObjectResult;
+            var result = controller.Post(mapper.Map<Message, MessageViewModel>(testMessage)) as ObjectResult;
 
             result.StatusCode.Should().Equals(201);
             result.Should().BeOfType<CreatedAtRouteResult>();
@@ -121,10 +123,9 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         public void Post_ShouldReturnBadRequest()
         {
             var controller = new MessagesController(context, logger.Object, mapper);
-            controller.ModelState.AddModelError("error", "some validation error");
             var testMessage = TestData.TestMessage("1");
 
-            var result = controller.Post(message: null) as ObjectResult;
+            var result = controller.Post(mapper.Map<Message, MessageViewModel>(testMessage)) as ObjectResult;
 
             result.Should().BeOfType<BadRequestObjectResult>();
             result.StatusCode.Should().Be(400);
@@ -197,7 +198,7 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             var dbMessage = context.Message.Find(testMessage.Id);
             dbMessage.Title.Should().Equals("New Title!");
         }
-
+        
         [Fact]
         public void Put_ShouldReturnBadRequest()
         {
@@ -206,7 +207,7 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             context.Message.Add(testMessage);
             context.SaveChanges();
 
-            var result = controller.Put(testMessage.Id, message: null) as ObjectResult ;
+            var result = controller.Put(testMessage.Id, messageVM: null) as ObjectResult ;
 
             result.Should().BeOfType<BadRequestObjectResult>();
             result.StatusCode.Should().Be(400);
@@ -218,7 +219,7 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             var controller = new MessagesController(context, logger.Object, mapper);
             var testMessage = TestData.TestMessage("1");
 
-            var result = controller.Put(testMessage.Id, message: null) as ObjectResult;
+            var result = controller.Put(testMessage.Id, messageVM: null) as ObjectResult;
 
             result.Should().BeOfType<NotFoundObjectResult>();
             result.StatusCode.Should().Be(404);
