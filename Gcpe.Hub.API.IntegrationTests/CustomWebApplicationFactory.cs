@@ -33,15 +33,6 @@ namespace Gcpe.Hub.API.IntegrationTests
                     var db = scopedServices.GetRequiredService<HubDbContext>();
                     var logger = scopedServices.GetRequiredService<ILogger<CustomWebApplicationFactory<Startup>>>();
                     db.Database.EnsureCreated();
-
-                    try
-                    {
-                        MessagesTestData.InitializeDbForTests(db);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, $"An error occurred seeding the db {ex}");
-                    }
                 }
             });
         }

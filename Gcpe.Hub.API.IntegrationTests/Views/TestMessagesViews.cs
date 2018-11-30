@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Gcpe.Hub.API.IntegrationTests.Helpers;
+using Gcpe.Hub.API.ViewModels;
 using Gcpe.Hub.Data.Entity;
 using Newtonsoft.Json;
 using Xunit;
@@ -14,7 +15,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
     {
         private readonly CustomWebApplicationFactory<Startup> _factory;
         public readonly HttpClient _client;
-        public Message testMessage = MessagesTestData.CreateMessage("Test message title",
+        public MessageViewModel testMessage = MessagesTestData.CreateMessage("Test message title",
             "Test message description", 0, true, false);
 
         public MessagesViewsShould(CustomWebApplicationFactory<Startup> factory)
@@ -26,13 +27,22 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         [Fact]
         public async Task List_EndpointReturnSuccessAndCorrectMessages()
         {
+            for (var i = 0; i < 5; i++)
+            {
+                var newMessage = MessagesTestData.CreateMessage("Test message title", "Test message description", 0);
+                var stringContent = new StringContent(JsonConvert.SerializeObject(newMessage), Encoding.UTF8, "application/json");
+
+                var createResponse = await _client.PostAsync("/api/messages", stringContent);
+                createResponse.EnsureSuccessStatusCode();
+            }
+
             var response = await _client.GetAsync("/api/messages");
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync();
             var deserializedBody = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel[]>(body);
 
             Assert.NotEmpty(deserializedBody);
-            deserializedBody.Should().HaveCountGreaterOrEqualTo(MessagesTestData.seedMessageCount);
+            deserializedBody.Should().HaveCountGreaterOrEqualTo(5);
         }
 
         [Fact]
