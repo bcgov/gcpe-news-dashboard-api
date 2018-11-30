@@ -15,7 +15,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         private readonly CustomWebApplicationFactory<Startup> _factory;
         public readonly HttpClient _client;
         public Message testMessage = MessagesTestData.CreateMessage("Test message title",
-            "Test message description", true, false, 0);
+            "Test message description", 0, true, false);
 
         public MessagesViewsShould(CustomWebApplicationFactory<Startup> factory)
         {
@@ -46,8 +46,8 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var body = await response.Content.ReadAsStringAsync();
             var messageResult = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel>(body);
 
-            messageResult.Title.Should().Equals(testMessage.Title);
-            messageResult.Description.Should().Equals(testMessage.Description);
+            messageResult.Title.Should().Be(testMessage.Title);
+            messageResult.Description.Should().Be(testMessage.Description);
         }
 
         [Fact]
@@ -59,7 +59,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var stringContent = new StringContent(JsonConvert.SerializeObject(brokenTestMessage), Encoding.UTF8, "application/json");
 
             var response = await _client.PostAsync("/api/messages", stringContent);
-            response.StatusCode.Should().Equals("400");
+            response.IsSuccessStatusCode.Should().BeFalse();
         }
 
         [Fact]
@@ -75,8 +75,8 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var body = await response.Content.ReadAsStringAsync();
             var messageResult = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel>(body);
 
-            messageResult.Title.Should().Equals(noDescMessage.Title);
-            messageResult.Description.Should().Equals(null);
+            messageResult.Title.Should().Be(noDescMessage.Title);
+            messageResult.Description.Should().BeNull();
         }
 
         [Fact]
@@ -94,9 +94,9 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var body = await response.Content.ReadAsStringAsync();
             var messageResult = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel>(body);
 
-            messageResult.Title.Should().Equals(testMessage.Title);
-            messageResult.Description.Should().Equals(testMessage.Description);
-            messageResult.Id.Should().Equals(id);
+            messageResult.Title.Should().Be(testMessage.Title);
+            messageResult.Description.Should().Be(testMessage.Description);
+            messageResult.Id.Should().Be(id);
         }
 
         [Fact]
@@ -104,7 +104,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         {
             var response = await _client.GetAsync($"/api/messages/{Guid.NewGuid()}");
 
-            response.StatusCode.Equals("404");
+            response.IsSuccessStatusCode.Should().BeFalse();
         }
 
         [Fact]
@@ -117,10 +117,8 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var createdMessage = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel>(createBody);
             var id = createdMessage.Id;
 
-            var newTestMessage = createdMessage;
-            newTestMessage.Title = "New title";
-            newTestMessage.Description = "New description";
-            newTestMessage.SortOrder = 10;
+            var newTestMessage = MessagesTestData.CreateMessage("new title", "new description", 10, true, false);
+            newTestMessage.Id = Guid.Empty;
 
             var content = new StringContent(JsonConvert.SerializeObject(newTestMessage), Encoding.UTF8, "application/json");
             var response = await _client.PutAsync($"/api/messages/{id}", content);
@@ -128,10 +126,10 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var body = await response.Content.ReadAsStringAsync();
             var messageResult = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel>(body);
 
-            messageResult.Title.Should().Equals(newTestMessage.Title);
-            messageResult.Description.Should().Equals(newTestMessage.Description);
-            messageResult.SortOrder.Should().Equals(newTestMessage.SortOrder);
-            messageResult.Id.Should().Equals(id);
+            messageResult.Title.Should().Be(newTestMessage.Title);
+            messageResult.Description.Should().Be(newTestMessage.Description);
+            messageResult.SortOrder.Should().Be(newTestMessage.SortOrder);
+            messageResult.Id.Should().Be(id);
         }
 
         [Fact]
@@ -151,12 +149,12 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var body = await response.Content.ReadAsStringAsync();
             var messageResult = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel>(body);
 
-            messageResult.Title.Should().Equals(title);
-            messageResult.Description.Should().Equals(null);
-            messageResult.SortOrder.Should().Equals(0);
+            messageResult.Title.Should().Be(title);
+            messageResult.Description.Should().Be(null);
+            messageResult.SortOrder.Should().Be(0);
             messageResult.IsPublished.Should().BeFalse();
             messageResult.IsHighlighted.Should().BeFalse();
-            messageResult.Id.Should().Equals(id);
+            messageResult.Id.Should().Be(id);
         }
 
         [Fact]
@@ -171,7 +169,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             
             var content = new StringContent(JsonConvert.SerializeObject(new { }), Encoding.UTF8, "application/json");
             var response = await _client.PutAsync($"/api/messages/{id}", content);
-            response.StatusCode.Should().Equals("400");
+            response.IsSuccessStatusCode.Should().BeFalse();
         }
     }
 }

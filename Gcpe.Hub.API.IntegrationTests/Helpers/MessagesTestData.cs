@@ -10,18 +10,17 @@ namespace Gcpe.Hub.API.IntegrationTests.Helpers
     {
         public static int seedMessageCount = 10;
 
-        public static Message CreateMessage(string title,
-            string description, Boolean isPublished, Boolean isHighlighted,
-            int sortOrder)
+        public static Message CreateMessage(string title, string description,
+            int sortOrder, bool isPublished = false, bool isHighlighted = false)
         {
             var message = new Message
             {
-                Id = Guid.NewGuid(),
+                Id = Guid.Empty,
                 Title = title,
                 Description = description,
+                SortOrder = sortOrder,
                 IsPublished = isPublished,
                 IsHighlighted = isHighlighted,
-                SortOrder = sortOrder,
                 Timestamp = DateTime.Now
             };
 
@@ -32,7 +31,8 @@ namespace Gcpe.Hub.API.IntegrationTests.Helpers
         {
             for(var i = 0; i < seedMessageCount; i++)
             {
-                var message = CreateMessage($"Title - {i}", $"Description - {i}", true, false, i);
+                var message = CreateMessage($"Title - {i}", $"Description - {i}", i, true, false);
+                message.Id = Guid.NewGuid();
                 db.Message.Add(message);
             }
             db.SaveChanges();

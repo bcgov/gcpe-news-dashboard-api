@@ -90,20 +90,18 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
                 };
             }
         }
-
-        public static Message TestMessage(string title)
+        public static Message CreateMessage(string title, string description,
+            int sortOrder, bool isPublished = false, bool isHighlighted = false)
         {
-            var id = Guid.NewGuid();
-
             var message = new Message
             {
-                Id = id,
-                Title = $"2018MESSAGE-{title}",
-                Description = $"DESCRIPTION-1",
-                SortOrder = 0,
-                Timestamp = DateTime.Now,
-                IsPublished = true,
-                IsHighlighted = false
+                Id = Guid.Empty,
+                Title = title,
+                Description = description,
+                SortOrder = sortOrder,
+                IsPublished = isPublished,
+                IsHighlighted = isHighlighted,
+                Timestamp = DateTime.Now
             };
 
             return message;

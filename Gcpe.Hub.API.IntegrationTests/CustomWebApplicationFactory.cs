@@ -40,7 +40,7 @@ namespace Gcpe.Hub.API.IntegrationTests
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError(ex, $"An erroroccurred seeding the db {ex}");
+                        logger.LogError(ex, $"An error occurred seeding the db {ex}");
                     }
                 }
             });
