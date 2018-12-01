@@ -16,7 +16,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         private readonly CustomWebApplicationFactory<Startup> _factory;
         public readonly HttpClient _client;
         public MessageViewModel testMessage = MessagesTestData.CreateMessage("Test message title",
-            "Test message description", 0, true, false);
+            "Test message description", 0);
 
         public MessagesViewsShould(CustomWebApplicationFactory<Startup> factory)
         {
@@ -120,7 +120,6 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         [Fact]
         public async Task Put_EndpointReturnSuccessAndCorrectMessage()
         {
-            testMessage.Id = Guid.Empty;
             var stringContent = new StringContent(JsonConvert.SerializeObject(testMessage), Encoding.UTF8, "application/json");
             var createResponse = await _client.PostAsync("/api/messages", stringContent);
             var createBody = await createResponse.Content.ReadAsStringAsync();
