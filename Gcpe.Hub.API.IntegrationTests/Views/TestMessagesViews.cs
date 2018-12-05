@@ -39,7 +39,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var response = await _client.GetAsync("/api/messages");
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync();
-            var deserializedBody = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel[]>(body);
+            var deserializedBody = JsonConvert.DeserializeObject<MessageViewModel[]>(body);
 
             Assert.NotEmpty(deserializedBody);
             deserializedBody.Should().HaveCountGreaterOrEqualTo(5);
@@ -54,7 +54,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var response = await _client.PostAsync("/api/messages",  stringContent);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync();
-            var messageResult = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel>(body);
+            var messageResult = JsonConvert.DeserializeObject<MessageViewModel>(body);
 
             messageResult.Title.Should().Be(testMessage.Title);
             messageResult.Description.Should().Be(testMessage.Description);
@@ -83,7 +83,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var response = await _client.PostAsync("/api/messages", stringContent);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync();
-            var messageResult = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel>(body);
+            var messageResult = JsonConvert.DeserializeObject<MessageViewModel>(body);
 
             messageResult.Title.Should().Be(noDescMessage.Title);
             messageResult.Description.Should().BeNull();
@@ -96,13 +96,13 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var stringContent = new StringContent(JsonConvert.SerializeObject(testMessage), Encoding.UTF8, "application/json");
             var createResponse = await _client.PostAsync("/api/messages", stringContent);
             var createBody = await createResponse.Content.ReadAsStringAsync();
-            var createdMessage = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel>(createBody);
+            var createdMessage = JsonConvert.DeserializeObject<MessageViewModel>(createBody);
             var id = createdMessage.Id;
 
             var response = await _client.GetAsync($"/api/Messages/{id}");
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync();
-            var messageResult = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel>(body);
+            var messageResult = JsonConvert.DeserializeObject<MessageViewModel>(body);
 
             messageResult.Title.Should().Be(testMessage.Title);
             messageResult.Description.Should().Be(testMessage.Description);
@@ -110,7 +110,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         }
 
         [Fact]
-        public async Task Get_EndpointNotFound()
+        public async Task Get_EndpointReturnsNotFound()
         {
             var response = await _client.GetAsync($"/api/messages/{Guid.NewGuid()}");
 
@@ -123,7 +123,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var stringContent = new StringContent(JsonConvert.SerializeObject(testMessage), Encoding.UTF8, "application/json");
             var createResponse = await _client.PostAsync("/api/messages", stringContent);
             var createBody = await createResponse.Content.ReadAsStringAsync();
-            var createdMessage = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel>(createBody);
+            var createdMessage = JsonConvert.DeserializeObject<MessageViewModel>(createBody);
             var id = createdMessage.Id;
 
             var newTestMessage = MessagesTestData.CreateMessage("new title", "new description", 10, true, false);
@@ -133,7 +133,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var response = await _client.PutAsync($"/api/messages/{id}", content);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync();
-            var messageResult = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel>(body);
+            var messageResult = JsonConvert.DeserializeObject<MessageViewModel>(body);
 
             messageResult.Title.Should().Be(newTestMessage.Title);
             messageResult.Description.Should().Be(newTestMessage.Description);
@@ -148,7 +148,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var stringContent = new StringContent(JsonConvert.SerializeObject(testMessage), Encoding.UTF8, "application/json");
             var createResponse = await _client.PostAsync("/api/messages", stringContent);
             var createBody = await createResponse.Content.ReadAsStringAsync();
-            var createdMessage = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel>(createBody);
+            var createdMessage = JsonConvert.DeserializeObject<MessageViewModel>(createBody);
             var id = createdMessage.Id;
 
             var title = "new title";
@@ -156,7 +156,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var response = await _client.PutAsync($"/api/messages/{id}", content);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync();
-            var messageResult = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel>(body);
+            var messageResult = JsonConvert.DeserializeObject<MessageViewModel>(body);
 
             messageResult.Title.Should().Be(title);
             messageResult.Description.Should().Be(null);
@@ -173,7 +173,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var stringContent = new StringContent(JsonConvert.SerializeObject(testMessage), Encoding.UTF8, "application/json");
             var createResponse = await _client.PostAsync("/api/messages", stringContent);
             var createBody = await createResponse.Content.ReadAsStringAsync();
-            var createdMessage = JsonConvert.DeserializeObject<Hub.API.ViewModels.MessageViewModel>(createBody);
+            var createdMessage = JsonConvert.DeserializeObject<MessageViewModel>(createBody);
             var id = createdMessage.Id;
             
             var content = new StringContent(JsonConvert.SerializeObject(new { }), Encoding.UTF8, "application/json");

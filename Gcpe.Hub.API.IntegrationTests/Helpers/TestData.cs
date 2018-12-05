@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Bogus;
+using Gcpe.Hub.API.ViewModels;
 using Gcpe.Hub.Data.Entity;
 
 namespace Gcpe.Hub.API.IntegrationTests
@@ -70,6 +71,18 @@ namespace Gcpe.Hub.API.IntegrationTests
                 collection.Add(item);
             }
             return collection;
+        }
+
+        public static SocialMediaPostViewModel CreateSocialMediaPost(string url)
+        {
+            var post = new SocialMediaPostViewModel
+            {
+                Id = Guid.Empty,
+                Url = url,
+                Timestamp = DateTime.Now
+            };
+
+            return post;
         }
     }
 }
