@@ -23,32 +23,21 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         private Mock<ILogger<SocialMediaController>> logger;
         private HubDbContext context;
         private IMapper mapper;
+        private SocialMediaController controller;
 
         public SocialMediaControllerTests()
-        {
-
-            this.context = GetContext();
-            this.logger = new Mock<ILogger<SocialMediaController>>();
-            this.mapper = CreateMapper();
-        }
-
-        private HubDbContext GetContext()
         {
             var options = new DbContextOptionsBuilder<HubDbContext>()
                       .UseInMemoryDatabase(Guid.NewGuid().ToString())
                       .Options;
-            var context = new HubDbContext(options);
-            return context;
-        }
-
-        private IMapper CreateMapper()
-        {
+            this.context = new HubDbContext(options);
+            this.logger = new Mock<ILogger<SocialMediaController>>();
             var mockMapper = new MapperConfiguration(cfg =>
             {
                 cfg.AddProfile(new MappingProfile());
             });
-            var mapper = mockMapper.CreateMapper();
-            return mapper;
+            this.mapper = mockMapper.CreateMapper();
+            this.controller = new SocialMediaController(context, logger.Object, mapper);
         }
 
         [Theory]
@@ -64,7 +53,6 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
                 context.SocialMediaPost.Add(post);
             }
             context.SaveChanges();
-            var controller = new SocialMediaController(context, logger.Object, mapper);
 
             var result = controller.GetAll();
             var okResult = result as ObjectResult;
@@ -96,9 +84,6 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         [Fact]
         public void Post_ShouldReturnSuccess()
         {
-
-            var controller = new SocialMediaController(context, logger.Object, mapper);
-
             var result = controller.Post(postVM: mapper.Map<SocialMediaPost, SocialMediaPostViewModel>(TestData.CreateSocialMediaPost("http://facebook.com/post/123")));
             var createdResult = result as ObjectResult;
 
@@ -113,7 +98,6 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         [Fact]
         public void Post_ShouldReturnBadRequest()
         {
-            var controller = new SocialMediaController(context, logger.Object, mapper);
             controller.ModelState.AddModelError("error", "some validation error");
             var testSocialMediaPost = TestData.CreateSocialMediaPost("http://facebook.com/post/123");
 
@@ -126,7 +110,6 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         [Fact]
         public void Get_ShouldReturnSuccess()
         {
-            var controller = new SocialMediaController(context, logger.Object, mapper);
             var testSocialMediaPost = TestData.CreateSocialMediaPost("http://facebook.com/post/123");
             context.SocialMediaPost.Add(testSocialMediaPost);
             context.SaveChanges();
@@ -163,8 +146,6 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         [Fact]
         public void Get_ShouldReturnNotFound()
         {
-            var controller = new SocialMediaController(context, logger.Object, mapper);
-
             var result = controller.Get(Guid.NewGuid()) as ObjectResult;
 
             result.Should().BeOfType<NotFoundObjectResult>();
@@ -181,8 +162,6 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             var socialMediaPostVM = mapper.Map<SocialMediaPost, SocialMediaPostViewModel>(testPost);
             socialMediaPostVM.Url = "http://twitter.com/post/123";
 
-
-            var controller = new SocialMediaController(context, logger.Object, mapper);
             var result = controller.Put(testPost.Id, socialMediaPostVM) as ObjectResult;
 
             result.Should().BeOfType<OkObjectResult>();
@@ -196,7 +175,6 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         [Fact]
         public void Put_ShouldReturnBadRequest()
         {
-            var controller = new SocialMediaController(context, logger.Object, mapper);
             var testSocialMediaPost = TestData.CreateSocialMediaPost("http://facebook.com/post/123");
             context.SocialMediaPost.Add(testSocialMediaPost);
             context.SaveChanges();
@@ -210,7 +188,6 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         [Fact]
         public void Put_ShouldReturnNotFound()
         {
-            var controller = new SocialMediaController(context, logger.Object, mapper);
             var testSocialMediaPost = TestData.CreateSocialMediaPost("http://facebook.com/post/123");
 
             var result = controller.Put(testSocialMediaPost.Id, postVM: null) as ObjectResult;

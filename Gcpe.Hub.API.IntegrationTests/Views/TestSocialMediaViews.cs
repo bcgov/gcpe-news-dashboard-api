@@ -11,20 +11,20 @@ using Xunit;
 
 namespace Gcpe.Hub.API.IntegrationTests.Views
 {
-    public class SocialMediaViewsShould: IClassFixture<CustomWebApplicationFactory<Startup>>
+    public class TestSocialMediaViews: IClassFixture<CustomWebApplicationFactory<Startup>>
     {
         private readonly CustomWebApplicationFactory<Startup> _factory;
         public readonly HttpClient _client;
         public SocialMediaPostViewModel testPost = TestData.CreateSocialMediaPost(url: "http://facebook.com/post/123");
 
-        public SocialMediaViewsShould(CustomWebApplicationFactory<Startup> factory)
+        public TestSocialMediaViews(CustomWebApplicationFactory<Startup> factory)
         {
             _factory = factory;
             _client = _factory.CreateClient();
         }
 
         [Fact]
-        public async Task List_EndpointReturnSuccessAndCorrectPost()
+        public async Task List_EndpointShouldReturnSuccessAndCorrectPost()
         {
             for (var i = 0; i < 5; i++)
             {
@@ -46,9 +46,8 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         }
 
         [Fact]
-        public async Task Create_EndpointReturnSuccessAndCorrectPost()
+        public async Task Create_EndpointShouldReturnSuccessAndCorrectPost()
         {
-            testPost.Id = Guid.Empty;
             var stringContent = new StringContent(JsonConvert.SerializeObject(testPost), Encoding.UTF8, "application/json");
 
             var response = await _client.PostAsync("/api/socialmedia", stringContent);
@@ -60,9 +59,8 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         }
 
         [Fact]
-        public async Task Create_EndpointRequiresUrl()
+        public async Task Create_EndpointShouldRequireUrl()
         {
-            testPost.Id = Guid.Empty;
             var brokenTestPost = testPost;
             brokenTestPost.Url = null;
             var stringContent = new StringContent(JsonConvert.SerializeObject(brokenTestPost), Encoding.UTF8, "application/json");
@@ -72,9 +70,8 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         }
 
         [Fact]
-        public async Task Get_EndpointReturnSuccessAndCorrectPost()
+        public async Task Get_EndpointShouldReturnSuccessAndCorrectPost()
         {
-            testPost.Id = Guid.Empty;
             var stringContent = new StringContent(JsonConvert.SerializeObject(testPost), Encoding.UTF8, "application/json");
             var createResponse = await _client.PostAsync("/api/socialmedia", stringContent);
             var createBody = await createResponse.Content.ReadAsStringAsync();
@@ -91,7 +88,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         }
 
         [Fact]
-        public async Task Get_EndpointReturnsNotFound()
+        public async Task Get_EndpointShouldReturnNotFound()
         {
             var response = await _client.GetAsync($"/api/socialmedia/{Guid.NewGuid()}");
 
@@ -99,7 +96,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         }
 
         [Fact]
-        public async Task Put_EndpointReturnSuccessAndCorrectMessage()
+        public async Task Put_EndpointShouldReturnSuccessAndCorrectMessage()
         {
             var stringContent = new StringContent(JsonConvert.SerializeObject(testPost), Encoding.UTF8, "application/json");
             var createResponse = await _client.PostAsync("/api/socialmedia", stringContent);
@@ -108,7 +105,6 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var id = createdPost.Id;
 
             var newPost = TestData.CreateSocialMediaPost("http://twitter.com/post/123");
-            newPost.Id = Guid.Empty;
 
             var content = new StringContent(JsonConvert.SerializeObject(newPost), Encoding.UTF8, "application/json");
             var response = await _client.PutAsync($"/api/socialmedia/{id}", content);
@@ -121,9 +117,8 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         }
 
         [Fact]
-        public async Task Put_EndpointShouldRequireUrl()
+        public async Task Put_EndpointShouldShouldRequireUrl()
         {
-            testPost.Id = Guid.Empty;
             var stringContent = new StringContent(JsonConvert.SerializeObject(testPost), Encoding.UTF8, "application/json");
             var createResponse = await _client.PostAsync("/api/socialmedia", stringContent);
             var createBody = await createResponse.Content.ReadAsStringAsync();
