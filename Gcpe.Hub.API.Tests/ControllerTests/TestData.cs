@@ -107,13 +107,15 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             return message;
         }
 
-        public static SocialMediaPost CreateSocialMediaPost(string url)
+        public static SocialMediaPost CreateSocialMediaPost(string url, int sortOrder = 0)
         {
             var post = new SocialMediaPost
             {
                 Id = Guid.Empty,
                 Url = url,
-                Timestamp = DateTime.Now
+                SortOrder = sortOrder,
+                Timestamp = DateTime.Now,
+                IsActive = true
             };
 
             return post;

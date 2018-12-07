@@ -44,12 +44,14 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         [InlineData(0)]
         [InlineData(1)]
         [InlineData(3)]
-        public void GetAll_ShouldReturnSuccess(int postCount)
+        [InlineData(10)]
+        public void GetAll_ShouldReturnSuccessAndSorted(int postCount)
         {
             for (var i = 0; i < postCount; i++)
             {
                 var post = TestData.CreateSocialMediaPost("http://facebook.com/post/123");
                 post.Id = Guid.NewGuid();
+                post.SortOrder = postCount - i;
                 context.SocialMediaPost.Add(post);
             }
             context.SaveChanges();
@@ -60,9 +62,36 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             okResult.Should().BeOfType<OkObjectResult>();
             okResult.Should().NotBeNull();
 
-            var models = okResult.Value as ICollection<SocialMediaPost>;
+            var models = okResult.Value as IList<SocialMediaPostViewModel>;
             models.Should().NotBeNull();
             models.Count().Should().Be(postCount);
+            for (int i = 0; i < models.Count() - 1; i++)
+            {
+                models[i].SortOrder.Should().BeLessThan(models[i + 1].SortOrder);
+            }
+        }
+
+        [Fact]
+        public void GetAll_ShouldntReturnDeletePosts()
+        {
+            for (var i = 0; i < 3; i++)
+            {
+                var post = TestData.CreateSocialMediaPost("http://facebook.com/post/123");
+                post.Id = Guid.NewGuid();
+                post.IsActive = false;
+                context.SocialMediaPost.Add(post);
+            }
+            context.SaveChanges();
+
+            var result = controller.GetAll() as ObjectResult;
+
+            result.Should().BeOfType<OkObjectResult>();
+            result.StatusCode.Should().Be(200);
+            result.Should().NotBeNull();
+
+            var models = result.Value as ICollection<SocialMediaPostViewModel>;
+            models.Should().NotBeNull();
+            models.Count().Should().Be(0);
         }
 
         [Fact]
@@ -124,6 +153,20 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         }
 
         [Fact]
+        public void Get_ShouldntReturnDeletedPost()
+        {
+            var testSocialMediaPost = TestData.CreateSocialMediaPost("http://facebook.com/post/123");
+            testSocialMediaPost.IsActive = false;
+            context.SocialMediaPost.Add(testSocialMediaPost);
+            context.SaveChanges();
+
+            var result = controller.Get(testSocialMediaPost.Id) as ObjectResult;
+
+            result.Should().BeOfType<NotFoundObjectResult>();
+            result.StatusCode.Should().Be(404);
+        }
+
+        [Fact]
         public void Get_ShouldReturnFail()
         {
             var options = new DbContextOptionsBuilder<HubDbContext>()
@@ -173,6 +216,22 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         }
 
         [Fact]
+        public void Put_ShouldntUpdateDeletedPost()
+        {
+            var testPost = TestData.CreateSocialMediaPost("http://facebook.com/post/123");
+            testPost.IsActive = false;
+            context.SocialMediaPost.Add(testPost);
+            context.SaveChanges();
+            var socialMediaPostVM = mapper.Map<SocialMediaPost, SocialMediaPostViewModel>(testPost);
+            socialMediaPostVM.Url = "http://twitter.com/post/123";
+
+            var result = controller.Put(testPost.Id, socialMediaPostVM) as ObjectResult;
+
+            result.Should().BeOfType<NotFoundObjectResult>();
+            result.StatusCode.Should().Be(404);
+        }
+
+        [Fact]
         public void Put_ShouldReturnBadRequest()
         {
             var testSocialMediaPost = TestData.CreateSocialMediaPost("http://facebook.com/post/123");
@@ -188,9 +247,46 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         [Fact]
         public void Put_ShouldReturnNotFound()
         {
-            var testSocialMediaPost = TestData.CreateSocialMediaPost("http://facebook.com/post/123");
+            var result = controller.Put(Guid.NewGuid(), postVM: null) as ObjectResult;
 
-            var result = controller.Put(testSocialMediaPost.Id, postVM: null) as ObjectResult;
+            result.Should().BeOfType<NotFoundObjectResult>();
+            result.StatusCode.Should().Be(404);
+        }
+
+        [Fact]
+        public void Delete_ShouldReturnSuccess()
+        {
+            var testPost = TestData.CreateSocialMediaPost("http://facebook.com/post/123");
+            testPost.Id = Guid.NewGuid();
+            context.SocialMediaPost.Add(testPost);
+            context.SaveChanges();
+
+            var result = controller.Delete(testPost.Id) as StatusCodeResult;
+
+            result.Should().BeOfType<NoContentResult>();
+            result.StatusCode.Should().Be(204);
+        }
+
+        [Fact]
+        public void Delete_ShouldReturnBadRequest()
+        {
+            var options = new DbContextOptionsBuilder<HubDbContext>()
+                      .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                      .Options;
+            var mockContext = new Mock<HubDbContext>(options);
+            mockContext.Setup(m => m.SocialMediaPost).Throws(new Exception());
+            var controller = new SocialMediaController(mockContext.Object, logger.Object, mapper);
+
+            var result = controller.Delete(Guid.NewGuid()) as ObjectResult;
+
+            result.Should().BeOfType<BadRequestObjectResult>();
+            result.StatusCode.Should().Be(400);
+        }
+
+        [Fact]
+        public void Delete_ShouldReturnNotFound()
+        {
+            var result = controller.Delete(Guid.NewGuid()) as ObjectResult;
 
             result.Should().BeOfType<NotFoundObjectResult>();
             result.StatusCode.Should().Be(404);

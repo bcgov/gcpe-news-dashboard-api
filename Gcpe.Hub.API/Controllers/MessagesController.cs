@@ -27,6 +27,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpGet]
+        [Produces(typeof(MessageViewModel))]
         [ProducesResponseType(200)]
         [ProducesResponseType(400)]
         public IActionResult GetAll([FromQuery(Name = "IsPublished")] Boolean IsPublished = true)
@@ -34,8 +35,7 @@ namespace Gcpe.Hub.API.Controllers
             try
             {
                 var messages = dbContext.Message.Where(m => m.IsPublished == IsPublished).ToList();
-                mapper.Map<List<Message>, List<MessageViewModel>>(messages);
-                return Ok(messages);
+                return Ok(mapper.Map<List<Message>, List<MessageViewModel>>(messages));
             }
             catch (Exception ex)
             {
@@ -45,6 +45,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpPost]
+        [Produces(typeof(MessageViewModel))]
         [ProducesResponseType(201)]
         [ProducesResponseType(400)]
         public IActionResult Post(MessageViewModel messageVM)

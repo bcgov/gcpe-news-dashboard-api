@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Text;
 using Bogus;
 using Gcpe.Hub.API.ViewModels;
 using Gcpe.Hub.Data.Entity;
+using Newtonsoft.Json;
 
 namespace Gcpe.Hub.API.IntegrationTests
 {
@@ -73,16 +76,14 @@ namespace Gcpe.Hub.API.IntegrationTests
             return collection;
         }
 
-        public static SocialMediaPostViewModel CreateSocialMediaPost(string url)
+        public static StringContent CreateSerializedSocialMediaPost(string url, int sortOrder)
         {
-            var post = new SocialMediaPostViewModel
-            {
-                Id = Guid.Empty,
-                Url = url,
-                Timestamp = DateTime.Now
+            var post = 
+            new {
+                SortOrder = sortOrder,
+                Url = url
             };
-
-            return post;
+            return new StringContent(JsonConvert.SerializeObject(post), Encoding.UTF8, "application/json");
         }
     }
 }

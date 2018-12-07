@@ -29,15 +29,15 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpGet]
+        [Produces(typeof(SocialMediaPostViewModel[]))]
         [ProducesResponseType(200)]
         [ProducesResponseType(400)]
         public IActionResult GetAll()
         {
             try
             {
-                var posts = dbContext.SocialMediaPost.ToList();
-                mapper.Map<List<SocialMediaPost>, List<SocialMediaPostViewModel>>(posts);
-                return Ok(posts);
+                var posts = dbContext.SocialMediaPost.Where(p => p.IsActive == true).OrderBy(p => p.SortOrder).ToList();
+                return Ok(mapper.Map<List<SocialMediaPost>, List<SocialMediaPostViewModel>>(posts));
             }
             catch (Exception ex)
             {
@@ -47,6 +47,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpPost]
+        [Produces(typeof(SocialMediaPostViewModel))]
         [ProducesResponseType(201)]
         [ProducesResponseType(400)]
         public IActionResult Post(SocialMediaPostViewModel postVM)
@@ -59,6 +60,7 @@ namespace Gcpe.Hub.API.Controllers
                 }
                 SocialMediaPost post = mapper.Map<SocialMediaPostViewModel, SocialMediaPost>(postVM);
                 post.Id = Guid.NewGuid();
+                post.IsActive = true;
                 dbContext.SocialMediaPost.Add(post);
                 dbContext.SaveChanges();
                 return CreatedAtRoute("GetPost", new { id = post.Id }, mapper.Map<SocialMediaPost, SocialMediaPostViewModel>(post));
@@ -72,7 +74,7 @@ namespace Gcpe.Hub.API.Controllers
 
         [HttpGet("{id}", Name = "GetPost")]
         [Produces(typeof(SocialMediaPostViewModel))]
-        [ProducesResponseType(200)]
+        [ProducesResponseType(204)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         public IActionResult Get(Guid id)
@@ -80,7 +82,7 @@ namespace Gcpe.Hub.API.Controllers
             try
             {
                 var post = dbContext.SocialMediaPost.Find(id);
-                if (post != null)
+                if (post != null && post.IsActive)
                 {
                     return Ok(mapper.Map<SocialMediaPost, SocialMediaPostViewModel>(post));
                 }
@@ -103,7 +105,7 @@ namespace Gcpe.Hub.API.Controllers
             try
             {
                 SocialMediaPost dbPost = dbContext.SocialMediaPost.Find(id);
-                if (dbPost != null)
+                if (dbPost != null && dbPost.IsActive)
                 {
                     dbPost = mapper.Map(postVM, dbPost);
                     dbPost.Timestamp = DateTime.Now;
@@ -118,6 +120,32 @@ namespace Gcpe.Hub.API.Controllers
             {
                 logger.LogError($"Failed to update social media post: {ex}");
                 return BadRequest("Failed to update social media post");
+            }
+        }
+
+        [HttpDelete("{id}")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        public IActionResult Delete(Guid id)
+        {
+            try
+            {
+                SocialMediaPost dbPost = dbContext.SocialMediaPost.Find(id);
+                if (dbPost != null && dbPost.IsActive)
+                {
+                    dbPost.IsActive = false;
+                    dbPost.Timestamp = DateTime.Now;
+                    dbContext.SocialMediaPost.Update(dbPost);
+                    dbContext.SaveChanges();
+                    return new NoContentResult();
+                }
+                return NotFound($"Social media post not found with id: {id}");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Failed to delete social media post: {ex}");
+                return BadRequest("Failed to delete social media post");
             }
         }
     }

@@ -15,7 +15,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
     {
         private readonly CustomWebApplicationFactory<Startup> _factory;
         public readonly HttpClient _client;
-        public SocialMediaPostViewModel testPost = TestData.CreateSocialMediaPost(url: "http://facebook.com/post/123");
+        public StringContent testPost = TestData.CreateSerializedSocialMediaPost(url: "http://facebook.com/post/123", sortOrder: 0);
 
         public TestSocialMediaViews(CustomWebApplicationFactory<Startup> factory)
         {
@@ -23,15 +23,23 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             _client = _factory.CreateClient();
         }
 
+        private async Task<Guid> _CreatePost()
+        {
+            var createResponse = await _client.PostAsync("/api/socialmedia", testPost);
+            var createBody = await createResponse.Content.ReadAsStringAsync();
+            var createdPost = JsonConvert.DeserializeObject<SocialMediaPostViewModel>(createBody);
+            return createdPost.Id;
+        }
+
         [Fact]
-        public async Task List_EndpointShouldReturnSuccessAndCorrectPost()
+        public async Task List_EndpointShouldReturnSuccessAndCorrectPostsSorted()
         {
             for (var i = 0; i < 5; i++)
             {
-                var newPost = TestData.CreateSocialMediaPost("http://facebook.com/post/123");
-                var stringContent = new StringContent(JsonConvert.SerializeObject(newPost), Encoding.UTF8, "application/json");
+                var sortOrder = 5 - i;
+                var newPost = TestData.CreateSerializedSocialMediaPost("http://facebook.com/post/123", sortOrder);
 
-                var createResponse = await _client.PostAsync("/api/socialmedia", stringContent);
+                var createResponse = await _client.PostAsync("/api/socialmedia", newPost);
                 createResponse.EnsureSuccessStatusCode();
             }
 
@@ -41,29 +49,38 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var body = await response.Content.ReadAsStringAsync();
             var deserializedBody = JsonConvert.DeserializeObject<SocialMediaPostViewModel[]>(body);
 
-            Assert.NotEmpty(deserializedBody);
-            deserializedBody.Should().HaveCountGreaterOrEqualTo(5);
+            deserializedBody.Should().NotBeEmpty();
+            deserializedBody.Should().HaveCount(5);
+            var models = deserializedBody as IList<SocialMediaPostViewModel>;
+
+            for (int i = 0; i < models.Count() - 1; i++)
+            {
+                models[i].SortOrder.Should().BeLessThan(models[i + 1].SortOrder);
+            }
         }
 
         [Fact]
         public async Task Create_EndpointShouldReturnSuccessAndCorrectPost()
         {
-            var stringContent = new StringContent(JsonConvert.SerializeObject(testPost), Encoding.UTF8, "application/json");
+            var url = "http://facebook.com/post/123";
+            var stringContent = TestData.CreateSerializedSocialMediaPost(url, 0);
 
             var response = await _client.PostAsync("/api/socialmedia", stringContent);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync();
             var messageResult = JsonConvert.DeserializeObject<SocialMediaPostViewModel>(body);
 
-            messageResult.Url.Should().Be(testPost.Url);
+            messageResult.Url.Should().Be(url);
         }
 
         [Fact]
         public async Task Create_EndpointShouldRequireUrl()
         {
-            var brokenTestPost = testPost;
-            brokenTestPost.Url = null;
-            var stringContent = new StringContent(JsonConvert.SerializeObject(brokenTestPost), Encoding.UTF8, "application/json");
+            var invalidPost = new SocialMediaPostViewModel
+            {
+                SortOrder = 0,
+            };
+            var stringContent = new StringContent(JsonConvert.SerializeObject(invalidPost), Encoding.UTF8, "application/json");
 
             var response = await _client.PostAsync("/api/socialmedia", stringContent);
             response.IsSuccessStatusCode.Should().BeFalse();
@@ -72,11 +89,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         [Fact]
         public async Task Get_EndpointShouldReturnSuccessAndCorrectPost()
         {
-            var stringContent = new StringContent(JsonConvert.SerializeObject(testPost), Encoding.UTF8, "application/json");
-            var createResponse = await _client.PostAsync("/api/socialmedia", stringContent);
-            var createBody = await createResponse.Content.ReadAsStringAsync();
-            var createdPost = JsonConvert.DeserializeObject<SocialMediaPostViewModel>(createBody);
-            var id = createdPost.Id;
+            var id = await _CreatePost();
 
             var response = await _client.GetAsync($"/api/socialmedia/{id}");
             response.EnsureSuccessStatusCode();
@@ -84,7 +97,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var postResult = JsonConvert.DeserializeObject<SocialMediaPostViewModel>(body);
 
             postResult.Url.Should().Be(postResult.Url);
-            postResult.Id.Should().Be(id);
+            postResult.Id.Should().Be(id.ToString());
         }
 
         [Fact]
@@ -98,36 +111,46 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         [Fact]
         public async Task Put_EndpointShouldReturnSuccessAndCorrectMessage()
         {
-            var stringContent = new StringContent(JsonConvert.SerializeObject(testPost), Encoding.UTF8, "application/json");
-            var createResponse = await _client.PostAsync("/api/socialmedia", stringContent);
-            var createBody = await createResponse.Content.ReadAsStringAsync();
-            var createdPost = JsonConvert.DeserializeObject<SocialMediaPostViewModel>(createBody);
-            var id = createdPost.Id;
+            var id = await _CreatePost();
 
-            var newPost = TestData.CreateSocialMediaPost("http://twitter.com/post/123");
-
-            var content = new StringContent(JsonConvert.SerializeObject(newPost), Encoding.UTF8, "application/json");
-            var response = await _client.PutAsync($"/api/socialmedia/{id}", content);
+            var newPost = TestData.CreateSerializedSocialMediaPost("http://twitter.com/post/123", 10);
+            var response = await _client.PutAsync($"/api/socialmedia/{id}", newPost);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync();
             var postResult = JsonConvert.DeserializeObject<SocialMediaPostViewModel>(body);
 
-            postResult.Url.Should().Be(postResult.Url);
-            postResult.Id.Should().Be(id);
+            postResult.Url.Should().Be("http://twitter.com/post/123");
+            postResult.SortOrder.Should().Be(10);
+            postResult.Id.Should().Be(id.ToString());
         }
 
         [Fact]
-        public async Task Put_EndpointShouldShouldRequireUrl()
+        public async Task Put_EndpointShouldRequireUrl()
         {
-            var stringContent = new StringContent(JsonConvert.SerializeObject(testPost), Encoding.UTF8, "application/json");
-            var createResponse = await _client.PostAsync("/api/socialmedia", stringContent);
-            var createBody = await createResponse.Content.ReadAsStringAsync();
-            var createdPost = JsonConvert.DeserializeObject<SocialMediaPostViewModel>(createBody);
-            var id = createdPost.Id;
+            var id = await _CreatePost();
 
             var content = new StringContent(JsonConvert.SerializeObject(new { }), Encoding.UTF8, "application/json");
             var response = await _client.PutAsync($"/api/socialmedia/{id}", content);
             response.IsSuccessStatusCode.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task Delete_EndpointShouldDelete()
+        {
+            var id = await _CreatePost();
+
+            var response = await _client.DeleteAsync($"/api/socialmedia/{id}");
+            response.EnsureSuccessStatusCode();
+
+            var getResponse = await _client.GetAsync($"/api/socialmedia/{id}");
+            getResponse.IsSuccessStatusCode.Should().BeFalse();
+            getResponse.StatusCode.Should().Be(404);
+
+            var getAllResponse = await _client.GetAsync($"/api/socialmedia");
+            getAllResponse.EnsureSuccessStatusCode();
+            var body = await getAllResponse.Content.ReadAsStringAsync();
+            var deserializedBody = JsonConvert.DeserializeObject<SocialMediaPostViewModel[]>(body);
+            deserializedBody.Should().BeEmpty();
         }
     }
 }
