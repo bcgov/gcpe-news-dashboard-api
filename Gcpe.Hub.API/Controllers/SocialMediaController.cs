@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using AutoMapper;
-using Gcpe.Hub.Data.Entity;
-using Gcpe.Hub.API.Data;
-using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Gcpe.Hub.API.ViewModels;
-using System.ComponentModel.DataAnnotations;
+using Gcpe.Hub.Data.Entity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Gcpe.Hub.API.Controllers
 {
@@ -30,13 +28,12 @@ namespace Gcpe.Hub.API.Controllers
 
         [HttpGet]
         [Produces(typeof(SocialMediaPostViewModel[]))]
-        [ProducesResponseType(200)]
         [ProducesResponseType(400)]
         public IActionResult GetAll()
         {
             try
             {
-                var posts = dbContext.SocialMediaPost.Where(p => p.IsActive == true).OrderBy(p => p.SortOrder).ToList();
+                var posts = dbContext.SocialMediaPost.Where(p => p.IsActive).OrderBy(p => p.SortOrder).ToList();
                 return Ok(mapper.Map<List<SocialMediaPost>, List<SocialMediaPostViewModel>>(posts));
             }
             catch (Exception ex)
@@ -74,7 +71,6 @@ namespace Gcpe.Hub.API.Controllers
 
         [HttpGet("{id}", Name = "GetPost")]
         [Produces(typeof(SocialMediaPostViewModel))]
-        [ProducesResponseType(204)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         public IActionResult Get(Guid id)
@@ -97,7 +93,6 @@ namespace Gcpe.Hub.API.Controllers
 
         [HttpPut("{id}")]
         [Produces(typeof(SocialMediaPostViewModel))]
-        [ProducesResponseType(200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         public IActionResult Put(Guid id, SocialMediaPostViewModel postVM)
@@ -124,7 +119,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpDelete("{id}")]
-        [ProducesResponseType(200)]
+        [ProducesResponseType(204)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         public IActionResult Delete(Guid id)

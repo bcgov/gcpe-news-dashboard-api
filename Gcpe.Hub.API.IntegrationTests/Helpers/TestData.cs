@@ -78,12 +78,25 @@ namespace Gcpe.Hub.API.IntegrationTests
 
         public static StringContent CreateSerializedSocialMediaPost(string url, int sortOrder)
         {
-            var post = 
-            new {
+            var post = new SocialMediaPostViewModel {
                 SortOrder = sortOrder,
                 Url = url
             };
             return new StringContent(JsonConvert.SerializeObject(post), Encoding.UTF8, "application/json");
+        }
+
+        public static StringContent CreateSerializedMessage(string title, string description,
+            int sortOrder, bool isPublished = true, bool isHighlighted = false)
+        {
+            var message = new MessageViewModel {
+                Title = title,
+                Description = description,
+                SortOrder = sortOrder,
+                IsPublished = isPublished,
+                IsHighlighted = isHighlighted
+            };
+
+            return new StringContent(JsonConvert.SerializeObject(message), Encoding.UTF8, "application/json");
         }
     }
 }

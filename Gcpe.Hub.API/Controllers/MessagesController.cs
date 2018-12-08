@@ -28,13 +28,12 @@ namespace Gcpe.Hub.API.Controllers
 
         [HttpGet]
         [Produces(typeof(MessageViewModel))]
-        [ProducesResponseType(200)]
         [ProducesResponseType(400)]
         public IActionResult GetAll([FromQuery(Name = "IsPublished")] Boolean IsPublished = true)
         {
             try
             {
-                var messages = dbContext.Message.Where(m => m.IsPublished == IsPublished).ToList();
+                var messages = dbContext.Message.Where(m => m.IsPublished == IsPublished).OrderBy(p => p.SortOrder).ToList();
                 return Ok(mapper.Map<List<Message>, List<MessageViewModel>>(messages));
             }
             catch (Exception ex)
@@ -45,8 +44,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpPost]
-        [Produces(typeof(MessageViewModel))]
-        [ProducesResponseType(201)]
+        [ProducesResponseType(typeof(MessageViewModel), 201)]
         [ProducesResponseType(400)]
         public IActionResult Post(MessageViewModel messageVM)
         {
@@ -71,7 +69,6 @@ namespace Gcpe.Hub.API.Controllers
 
         [HttpGet("{id}", Name = "GetMessage")]
         [Produces(typeof(MessageViewModel))]
-        [ProducesResponseType(200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         public IActionResult Get(Guid id)
@@ -94,7 +91,6 @@ namespace Gcpe.Hub.API.Controllers
 
         [HttpPut("{id}")]
         [Produces(typeof(MessageViewModel))]
-        [ProducesResponseType(200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         public IActionResult Put(Guid id, MessageViewModel messageVM)
@@ -113,7 +109,6 @@ namespace Gcpe.Hub.API.Controllers
                     return Ok(mapper.Map<Message, MessageViewModel>(dbMessage));
                 }
                 return NotFound($"Message not found with id: {id}");
-
             }
             catch (Exception ex)
             {

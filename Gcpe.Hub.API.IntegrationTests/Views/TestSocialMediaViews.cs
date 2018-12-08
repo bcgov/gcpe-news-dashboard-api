@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -36,7 +34,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         {
             for (var i = 0; i < 5; i++)
             {
-                var sortOrder = 5 - i;
+                int sortOrder = 5 - i;
                 var newPost = TestData.CreateSerializedSocialMediaPost("http://facebook.com/post/123", sortOrder);
 
                 var createResponse = await _client.PostAsync("/api/socialmedia", newPost);
@@ -47,13 +45,12 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             response.EnsureSuccessStatusCode();
 
             var body = await response.Content.ReadAsStringAsync();
-            var deserializedBody = JsonConvert.DeserializeObject<SocialMediaPostViewModel[]>(body);
+            var models = JsonConvert.DeserializeObject<SocialMediaPostViewModel[]>(body);
 
-            deserializedBody.Should().NotBeEmpty();
-            deserializedBody.Should().HaveCount(5);
-            var models = deserializedBody as IList<SocialMediaPostViewModel>;
+            models.Should().NotBeEmpty();
+            models.Should().HaveCount(5);
 
-            for (int i = 0; i < models.Count() - 1; i++)
+            for (int i = 0; i < models.Length - 1; i++)
             {
                 models[i].SortOrder.Should().BeLessThan(models[i + 1].SortOrder);
             }
@@ -149,8 +146,12 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             var getAllResponse = await _client.GetAsync($"/api/socialmedia");
             getAllResponse.EnsureSuccessStatusCode();
             var body = await getAllResponse.Content.ReadAsStringAsync();
-            var deserializedBody = JsonConvert.DeserializeObject<SocialMediaPostViewModel[]>(body);
-            deserializedBody.Should().BeEmpty();
+            var models = JsonConvert.DeserializeObject<SocialMediaPostViewModel[]>(body);
+
+            foreach (SocialMediaPostViewModel post in models)
+            {
+                post.Id.Should().NotBe(id);
+            }
         }
     }
 }
