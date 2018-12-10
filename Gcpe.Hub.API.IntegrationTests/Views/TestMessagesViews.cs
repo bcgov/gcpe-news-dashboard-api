@@ -22,7 +22,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
             _client = _factory.CreateClient();
         }
 
-        private async Task<Guid> _CreateMessage()
+        private async Task<Guid> _PostMessage()
         {
             var createResponse = await _client.PostAsync("/api/messages", testMessage);
             var createBody = await createResponse.Content.ReadAsStringAsync();
@@ -91,7 +91,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         [Fact]
         public async Task Get_EndpointReturnSuccessAndCorrectMessage()
         {
-            Guid id = await _CreateMessage();
+            Guid id = await _PostMessage();
 
             var response = await _client.GetAsync($"/api/Messages/{id}");
             response.EnsureSuccessStatusCode();
@@ -112,7 +112,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         [Fact]
         public async Task Put_EndpointReturnSuccessAndCorrectMessage()
         {
-            Guid id = await _CreateMessage();
+            Guid id = await _PostMessage();
             var newTestMessage = TestData.CreateSerializedMessage("new title", "new description", 10, true, false);
 
             var response = await _client.PutAsync($"/api/messages/{id}", newTestMessage);
@@ -129,7 +129,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         [Fact]
         public async Task Put_EndpointReturnSuccessWithDefaultsAndCorrectMessage()
         {
-            Guid id = await _CreateMessage();
+            Guid id = await _PostMessage();
             var content = new StringContent(JsonConvert.SerializeObject(new { Title = "new title" }), Encoding.UTF8, "application/json");
 
             var response = await _client.PutAsync($"/api/messages/{id}", content);
@@ -148,7 +148,7 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         [Fact]
         public async Task Put_EndpointShouldRequireTitle()
         {
-            Guid id = await _CreateMessage();
+            Guid id = await _PostMessage();
             
             var content = new StringContent(JsonConvert.SerializeObject(new { }), Encoding.UTF8, "application/json");
             var response = await _client.PutAsync($"/api/messages/{id}", content);

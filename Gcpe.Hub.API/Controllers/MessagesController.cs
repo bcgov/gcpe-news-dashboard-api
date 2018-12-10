@@ -26,6 +26,11 @@ namespace Gcpe.Hub.API.Controllers
             this.mapper = mapper;
         }
 
+        private string ErrorMessage(string operation, bool plural = false)
+        {
+            return $"Failed to {operation} message{(plural ? "(s)" : "")}";
+        }
+
         [HttpGet]
         [Produces(typeof(MessageViewModel))]
         [ProducesResponseType(400)]
@@ -38,8 +43,8 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError($"Failed to get messages: {ex}");
-                return BadRequest("Failed to get messages");
+                logger.LogError(ErrorMessage("retrieve", true) + $": {ex}");
+                return BadRequest(ErrorMessage("retrieve", true));
             }
         }
 
@@ -62,8 +67,8 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError($"Failed to create message: {ex}");
-                return BadRequest("Failed to create message");
+                logger.LogError(ErrorMessage("create") + $": {ex}");
+                return BadRequest(ErrorMessage("create"));
             }
         }
 
@@ -84,8 +89,8 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError($"Failed to retrieve message: {ex}");
-                return BadRequest("Failed to retrieve message");
+                logger.LogError(ErrorMessage("retrieve") + $": {ex}");
+                return BadRequest(ErrorMessage("retrieve"));
             }
         }
 
@@ -112,8 +117,8 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError($"Failed to update message: {ex}");
-                return BadRequest("Failed to update message");
+                logger.LogError(ErrorMessage("update") + $": {ex}");
+                return BadRequest(ErrorMessage("update"));
             }
         }
     }

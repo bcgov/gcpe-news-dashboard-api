@@ -26,6 +26,11 @@ namespace Gcpe.Hub.API.Controllers
             this.mapper = mapper;
         }
 
+        private string ErrorMessage(string operation, bool plural = false)
+        {
+            return $"Failed to {operation} social media post{(plural ? "(s)" : "")}";
+        }
+
         [HttpGet]
         [Produces(typeof(SocialMediaPostViewModel[]))]
         [ProducesResponseType(400)]
@@ -38,8 +43,8 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError($"Failed to get social media posts: {ex}");
-                return BadRequest("Failed to get social media posts");
+                logger.LogError(ErrorMessage("retrieve", true) + $": {ex}");
+                return BadRequest(ErrorMessage("retrieve", true));
             }
         }
 
@@ -64,8 +69,8 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError($"Failed to create social media post: {ex}");
-                return BadRequest("Failed to create social media post");
+                logger.LogError(ErrorMessage("create") + $": {ex}");
+                return BadRequest(ErrorMessage("create"));
             }
         }
 
@@ -86,8 +91,8 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError($"Failed to retrieve social media post: {ex}");
-                return BadRequest("Failed to retrieve social media post");
+                logger.LogError(ErrorMessage("retrieve") + $": {ex}");
+                return BadRequest(ErrorMessage("retrieve"));
             }
         }
 
@@ -113,8 +118,8 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError($"Failed to update social media post: {ex}");
-                return BadRequest("Failed to update social media post");
+                logger.LogError(ErrorMessage("update") + $": {ex}");
+                return BadRequest(ErrorMessage("update"));
             }
         }
 
@@ -139,8 +144,8 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError($"Failed to delete social media post: {ex}");
-                return BadRequest("Failed to delete social media post");
+                logger.LogError(ErrorMessage("delete") + $": {ex}");
+                return BadRequest(ErrorMessage("delete"));
             }
         }
     }
