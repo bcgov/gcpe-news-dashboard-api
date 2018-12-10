@@ -84,7 +84,11 @@
         "displayName": "Git Repo URL",
         "description": "The URL to your GIT repo.",
         "required": true,
+<<<<<<< HEAD
         "value": "https://github.com/bcgov/gcpe-news-dashboard"
+=======
+        "value": "https://github.com/bcgov/gcpe-hub-api.git"
+>>>>>>> upstream/master
       },
       {
         "name": "GIT_REF",
