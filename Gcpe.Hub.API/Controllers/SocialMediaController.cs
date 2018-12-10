@@ -26,6 +26,12 @@ namespace Gcpe.Hub.API.Controllers
             this.mapper = mapper;
         }
 
+        private IActionResult GetBadRequest(string message, Exception ex)
+        {
+            logger.LogError($"{message}: {ex}");
+            return BadRequest(message);
+        }
+
         private string ErrorMessage(string operation, bool plural = false)
         {
             return $"Failed to {operation} social media post{(plural ? "(s)" : "")}";
@@ -43,8 +49,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError(ErrorMessage("retrieve", true) + $": {ex}");
-                return BadRequest(ErrorMessage("retrieve", true));
+                return GetBadRequest("Failed to retrieve social media posts", ex);
             }
         }
 
@@ -69,8 +74,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError(ErrorMessage("create") + $": {ex}");
-                return BadRequest(ErrorMessage("create"));
+                return GetBadRequest("Failed to create social media post", ex);
             }
         }
 
@@ -91,8 +95,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError(ErrorMessage("retrieve") + $": {ex}");
-                return BadRequest(ErrorMessage("retrieve"));
+                return GetBadRequest("Failed to retrieve social media post", ex);
             }
         }
 
@@ -118,8 +121,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError(ErrorMessage("update") + $": {ex}");
-                return BadRequest(ErrorMessage("update"));
+                return GetBadRequest("Failed to update social media post", ex);
             }
         }
 
@@ -144,8 +146,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError(ErrorMessage("delete") + $": {ex}");
-                return BadRequest(ErrorMessage("delete"));
+                return GetBadRequest("Failed to delete social media post", ex);
             }
         }
     }

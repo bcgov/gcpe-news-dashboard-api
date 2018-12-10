@@ -26,9 +26,10 @@ namespace Gcpe.Hub.API.Controllers
             this.mapper = mapper;
         }
 
-        private string ErrorMessage(string operation, bool plural = false)
+        private IActionResult GetBadRequest(string message, Exception ex)
         {
-            return $"Failed to {operation} message{(plural ? "(s)" : "")}";
+            logger.LogError($"{message}: {ex}");
+            return BadRequest(message);
         }
 
         [HttpGet]
@@ -43,8 +44,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError(ErrorMessage("retrieve", true) + $": {ex}");
-                return BadRequest(ErrorMessage("retrieve", true));
+                return GetBadRequest("Failed to retrieve messages", ex);
             }
         }
 
@@ -67,8 +67,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError(ErrorMessage("create") + $": {ex}");
-                return BadRequest(ErrorMessage("create"));
+                return GetBadRequest("Failed to create message", ex);
             }
         }
 
@@ -89,8 +88,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError(ErrorMessage("retrieve") + $": {ex}");
-                return BadRequest(ErrorMessage("retrieve"));
+                return GetBadRequest("Failed to retrieve message", ex);
             }
         }
 
@@ -117,8 +115,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError(ErrorMessage("update") + $": {ex}");
-                return BadRequest(ErrorMessage("update"));
+                return GetBadRequest("Failed to update message", ex);
             }
         }
     }
