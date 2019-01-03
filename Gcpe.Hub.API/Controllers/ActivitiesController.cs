@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Gcpe.Hub.API.Helpers;
+using Microsoft.AspNetCore.Hosting;
 
 namespace Gcpe.Hub.API.Controllers
 {
@@ -19,33 +20,52 @@ namespace Gcpe.Hub.API.Controllers
         private readonly HubDbContext dbContext;
         private readonly ILogger<ActivitiesController> logger;
         private readonly IMapper mapper;
+        private static DateTime? mostFutureForecastActivity = null;
 
         public ActivitiesController(HubDbContext dbContext,
             ILogger<ActivitiesController> logger,
-            IMapper mapper)
+            IMapper mapper,
+            IHostingEnvironment env)
         {
             this.dbContext = dbContext;
             this.logger = logger;
             this.mapper = mapper;
+            if (env?.IsProduction() == false && !mostFutureForecastActivity.HasValue)
+            {
+                mostFutureForecastActivity = Forecast(dbContext).OrderByDescending(a => a.StartDateTime).First().StartDateTime;
+            }
+        }
+
+        internal static IQueryable<Activity> QueryAll(HubDbContext dbContext)
+        {
+            return dbContext.Activity.Include(a => a.ContactMinistry).Include(a => a.City)
+                .Include(a => a.ActivityCategories).ThenInclude(ac => ac.Category)
+                .Include(a => a.ActivitySharedWith).ThenInclude(sw => sw.Ministry);
+        }
+        private IQueryable<Activity> Forecast(HubDbContext dbContext)
+        {
+            return QueryAll(dbContext)
+                .Where(a => a.IsConfirmed && a.IsActive && !a.IsConfidential && //a.ActivityKeywords.Any(ak => ak.Keyword.Name.StartsWith("HQ-")) &&
+                            a.ActivityCategories.Any(ac => ac.Category.Name.StartsWith("Approved") || ac.Category.Name == "Release Only (No Event)" || ac.Category.Name.EndsWith("with Release")));
         }
 
         [HttpGet("Forecast/{numDays}")]
         [Produces(typeof(IEnumerable<Models.Activity>))]
         [ProducesResponseType(400)]
+        [ResponseCache(Duration = 300)] // change to 10 when using swagger
         public IActionResult GetActivityForecast(int numDays)
         {
             try
             {
+                IQueryable<Activity> forecast = Forecast(dbContext);
                 var today = DateTime.Today;
-                IList<Models.Activity> forecast = dbContext.Activity.Include(a => a.ContactMinistry).Include(a => a.City)
-                    .Include(a => a.ActivityCategories).ThenInclude(ac => ac.Category)
-                    .Include(a => a.ActivitySharedWith).ThenInclude(sw => sw.Ministry)
-                    .Where(a => a.StartDateTime >= today && a.StartDateTime <= today.AddDays(numDays) && !a.IsConfidential && a.IsConfirmed && a.IsActive &&
-//                               a.ActivityKeywords.Any(ak => ak.Keyword.Name.StartsWith("HQ-")) &&
-                               a.ActivityCategories.Any(ac => ac.Category.Name.StartsWith("Approved") || ac.Category.Name == "Release Only (No Event)" || ac.Category.Name.EndsWith("with Release")))
-                    .Select(a => mapper.Map<Models.Activity>(a)).ToList();
+                if (mostFutureForecastActivity.HasValue)
+                {
+                    today = mostFutureForecastActivity.Value.AddDays(today.DayOfWeek - mostFutureForecastActivity.Value.DayOfWeek - 26 * 7); // 26 weeks before the most future activity for testing with a stale db
+                }
+                forecast = forecast.Where(a => a.StartDateTime >= today && a.StartDateTime <= today.AddDays(numDays)).OrderBy(a => a.StartDateTime);
 
-                return Ok(forecast);
+                return Ok(forecast.Select(a => mapper.Map<Models.Activity>(a)).ToList());
             }
             catch (Exception ex)
             {
@@ -61,10 +81,7 @@ namespace Gcpe.Hub.API.Controllers
         {
             try
             {
-                var dbActivity = dbContext.Activity.Include(a => a.ContactMinistry).Include(a => a.City)
-                    .Include(a => a.ActivityCategories).ThenInclude(ac => ac.Category)
-                    .Include(a => a.ActivitySharedWith).ThenInclude(sw => sw.Ministry)
-                    .FirstOrDefault(a => a.Id == id);
+                var dbActivity = QueryAll(dbContext).FirstOrDefault(a => a.Id == id);
 
                 if (dbActivity != null)
                 {
@@ -85,9 +102,11 @@ namespace Gcpe.Hub.API.Controllers
         {
             try
             {
-                dbContext.Activity.Add(mapper.Map<Activity>(activity));
+                Activity dbActivity = new Activity { CreatedDateTime = DateTime.Now };
+                dbActivity.UpdateFromModel(activity, dbContext);
+                dbContext.Activity.Add(dbActivity);
                 dbContext.SaveChanges();
-                return CreatedAtRoute("GetActivity", new { id = activity.Id }, activity);
+                return CreatedAtRoute("GetActivity", new { id = activity.Id }, mapper.Map<Models.Activity>(dbActivity));
             }
             catch (Exception ex)
             {
@@ -108,12 +127,10 @@ namespace Gcpe.Hub.API.Controllers
                 {
                     return NotFound($"Could not find an activity with an id of {id}");
                 }
-                dbActivity = mapper.Map(activity, dbActivity);
-                dbActivity.LastUpdatedDateTime = DateTime.Now;
-                dbActivity.Id = id;
+                dbActivity.UpdateFromModel(activity, dbContext);
                 dbContext.Activity.Update(dbActivity);
                 dbContext.SaveChanges();
-                return Ok(activity);
+                return Ok(mapper.Map<Models.Activity>(dbActivity));
             }
             catch (Exception ex)
             {

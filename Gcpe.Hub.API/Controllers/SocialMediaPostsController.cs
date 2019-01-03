@@ -29,6 +29,7 @@ namespace Gcpe.Hub.API.Controllers
         [HttpGet]
         [Produces(typeof(IEnumerable<Models.SocialMediaPost>))]
         [ProducesResponseType(400)]
+        [ResponseCache(Duration = 30)] // change to 10 when using swagger
         public IActionResult GetAllSocialMediaPosts()
         {
             try
@@ -58,7 +59,7 @@ namespace Gcpe.Hub.API.Controllers
                 dbPost.IsActive = true;
                 dbContext.SocialMediaPost.Add(dbPost);
                 dbContext.SaveChanges();
-                return CreatedAtRoute("GetPost", new { id = dbPost.Id }, mapper.Map<Models.SocialMediaPost>(dbPost));
+                return CreatedAtRoute("GetSocialMediaPost", new { id = dbPost.Id }, mapper.Map<Models.SocialMediaPost>(dbPost));
             }
             catch (Exception ex)
             {
@@ -66,7 +67,7 @@ namespace Gcpe.Hub.API.Controllers
             }
         }
 
-        [HttpGet("{id}", Name = "GetPost")]
+        [HttpGet("{id}", Name = "GetSocialMediaPost")]
         [Produces(typeof(Models.SocialMediaPost))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]

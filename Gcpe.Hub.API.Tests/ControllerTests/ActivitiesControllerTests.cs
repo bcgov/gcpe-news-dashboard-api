@@ -4,7 +4,7 @@ using System.Linq;
 using AutoMapper;
 using FluentAssertions;
 using Gcpe.Hub.API.Controllers;
-using Gcpe.Hub.API.Data;
+using Gcpe.Hub.API.Helpers;
 using Gcpe.Hub.Data.Entity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +41,11 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             this.context.Dispose();
         }
 
+        private ActivitiesController Controller(HubDbContext c = null)
+        {
+            return new ActivitiesController(c??context, logger.Object, mapper, null);
+        }
+
         [Theory]
         [InlineData(0)]
         [InlineData(1)]
@@ -53,9 +58,8 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
                 context.Activity.Add(dbActivity);
             }
             context.SaveChanges();
-            var controller = new ActivitiesController(context, logger.Object, mapper);
 
-            var result = controller.GetActivityForecast(7) as ObjectResult;
+            var result = Controller().GetActivityForecast(7) as ObjectResult;
 
             result.Should().BeOfType<OkObjectResult>();
             result.Should().NotBeNull();
@@ -76,9 +80,8 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
                 context.Activity.Add(testDbActivity);
             }
             context.SaveChanges();
-            var controller = new ActivitiesController(context, logger.Object, mapper);
 
-            var result = controller.GetActivityForecast(numDays) as ObjectResult;
+            var result = Controller().GetActivityForecast(numDays) as ObjectResult;
 
             result.Should().BeOfType<OkObjectResult>();
             var models = result.Value as ICollection<Models.Activity>;
@@ -90,9 +93,8 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         {
             var mockContext = new Mock<HubDbContext>(options);
             mockContext.Setup(m => m.Activity).Throws(new Exception());
-            var controller = new ActivitiesController(mockContext.Object, logger.Object, mapper);
 
-            var result = controller.GetActivityForecast(1) as ObjectResult;
+            var result = Controller(mockContext.Object).GetActivityForecast(1) as ObjectResult;
 
             result.StatusCode.Should().Be(400);
             result.Should().BeOfType<BadRequestObjectResult>();
@@ -101,10 +103,11 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         [Fact]
         public void Post_ShouldReturnSuccess()
         {
-            var controller = new ActivitiesController(context, logger.Object, mapper);
             var testDbActivity = TestData.CreateDbActivity("test title", "test details", 1);
+            context.Category.AddRange(testDbActivity.ActivityCategories.Select(ac => ac.Category));
+            context.SaveChanges();
 
-            var result = controller.AddActivity(mapper.Map<Models.Activity>(testDbActivity)) as ObjectResult;
+            var result = Controller().AddActivity(mapper.Map<Models.Activity>(testDbActivity)) as ObjectResult;
 
             result.StatusCode.Should().Be(201);
             result.Should().BeOfType<CreatedAtRouteResult>();
@@ -115,12 +118,11 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         [Fact]
         public void Get_ShouldReturnSuccess()
         {
-            var controller = new ActivitiesController(context, logger.Object, mapper);
             var testDbActivity = TestData.CreateDbActivity("test title", "test details", 1);
             context.Activity.Add(testDbActivity);
             context.SaveChanges();
 
-            var result = controller.GetActivity(testDbActivity.Id) as ObjectResult;
+            var result = Controller().GetActivity(testDbActivity.Id) as ObjectResult;
 
             result.Should().BeOfType<OkObjectResult>();
             result.StatusCode.Should().Be(200);
@@ -131,14 +133,13 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         [Fact]
         public void Get_ShouldReturnFail()
         {
-            var mockContext = new Mock<HubDbContext>(options);
-            mockContext.Setup(m => m.Activity).Throws(new Exception());
-            var controller = new ActivitiesController(mockContext.Object, logger.Object, mapper);
             var testDbActivity = TestData.CreateDbActivity("test title", "test details", 2);
             context.Activity.Add(testDbActivity);
             context.SaveChanges();
 
-            var result = controller.GetActivity(testDbActivity.Id) as ObjectResult;
+            var mockContext = new Mock<HubDbContext>(options);
+            mockContext.Setup(m => m.Activity).Throws(new Exception());
+            var result = Controller(mockContext.Object).GetActivity(testDbActivity.Id) as ObjectResult;
 
             result.Should().BeOfType<BadRequestObjectResult>();
             result.StatusCode.Should().Be(400);
@@ -147,9 +148,7 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         [Fact]
         public void Get_ShouldReturnNotFound()
         {
-            var controller = new ActivitiesController(context, logger.Object, mapper);
-
-            var result = controller.GetActivity(-1) as ObjectResult;
+            var result = Controller().GetActivity(-1) as ObjectResult;
 
             result.Should().BeOfType<NotFoundObjectResult>();
             result.StatusCode.Should().Be(404);
@@ -161,18 +160,22 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             var testDbActivity = TestData.CreateDbActivity("test title", "test details", 1);
 
             context.Activity.Add(testDbActivity);
+            context.Category.Add(new Category { Name = "New Category" });
             context.SaveChanges();
+
             var testActivity = mapper.Map<Models.Activity>(testDbActivity);
             testActivity.Title = "New Title!";
+            testActivity.Categories = new string[] { "New Category" };
 
 
-            var controller = new ActivitiesController(context, logger.Object, mapper);
-            var result = controller.UpdateActivity(testDbActivity.Id, testActivity) as ObjectResult;
+            var result = Controller().UpdateActivity(testDbActivity.Id, testActivity) as ObjectResult;
 
             result.Should().BeOfType<OkObjectResult>();
             result.StatusCode.Should().Be(200);
             var model = result.Value as Models.Activity;
             model.Title.Should().Be("New Title!");
+            model.Categories.First().Should().Be("New Category");
+
             var DbActivity = context.Activity.Find(testDbActivity.Id);
             DbActivity.Title.Should().Be("New Title!");
         }
@@ -180,12 +183,11 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         [Fact]
         public void Put_ShouldReturnBadRequest()
         {
-            var controller = new ActivitiesController(context, logger.Object, mapper);
             var testDbActivity = TestData.CreateDbActivity("test title", "test details", 2);
             context.Activity.Add(testDbActivity);
             context.SaveChanges();
 
-            var result = controller.UpdateActivity(testDbActivity.Id, activity: null) as ObjectResult ;
+            var result = Controller().UpdateActivity(testDbActivity.Id, activity: null) as ObjectResult ;
 
             result.Should().BeOfType<BadRequestObjectResult>();
             result.StatusCode.Should().Be(400);
@@ -194,10 +196,9 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         [Fact]
         public void Put_ShouldReturnNotFound()
         {
-            var controller = new ActivitiesController(context, logger.Object, mapper);
             var testDbActivity = TestData.CreateDbActivity("test title", "test details", 2);
 
-            var result = controller.UpdateActivity(testDbActivity.Id, activity: null) as ObjectResult;
+            var result = Controller().UpdateActivity(testDbActivity.Id, activity: null) as ObjectResult;
 
             result.Should().BeOfType<NotFoundObjectResult>();
             result.StatusCode.Should().Be(404);
