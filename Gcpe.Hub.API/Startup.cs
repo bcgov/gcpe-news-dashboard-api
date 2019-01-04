@@ -39,9 +39,11 @@ namespace Gcpe.Hub.API
             services.AddSingleton<IDataContext, InMemoryDataContext>();
             services.AddSingleton<IRepository, InMemoryRepository>();
 
-            services.AddDbContext<HubDbContext>(options => options.UseSqlServer(Configuration["HubDbContext"])
+            if (! string.IsNullOrEmpty(Configuration["HubDbContext"]))
+            {
+                services.AddDbContext<HubDbContext>(options => options.UseSqlServer(Configuration["HubDbContext"])
                 .ConfigureWarnings(warnings => warnings.Throw(RelationalEventId.QueryClientEvaluationWarning)));
-
+            }
 
             services.AddMvc()
                 .AddJsonOptions(opt => opt.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore)
