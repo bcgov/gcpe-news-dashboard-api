@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using AutoMapper;
-using Gcpe.Hub.API.ViewModels;
+using Gcpe.Hub.API.Helpers;
 using Gcpe.Hub.Data.Entity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -27,97 +27,151 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpGet]
-        [ProducesResponseType(200)]
+        [Produces(typeof(IEnumerable<Models.Message>))]
         [ProducesResponseType(400)]
-        public IActionResult GetAll([FromQuery(Name = "IsPublished")] Boolean IsPublished = true)
+        [ResponseCache(Duration = 30)] // change to 10 when using swagger
+        public IActionResult GetAllMessages([FromQuery(Name = "IsPublished")] bool IsPublished = true)
         {
             try
             {
-                var messages = dbContext.Message.Where(m => m.IsPublished == IsPublished).ToList();
-                mapper.Map<List<Message>, List<MessageViewModel>>(messages);
-                return Ok(messages);
+                var dbMessages = dbContext.Message.Where(m => m.IsPublished == IsPublished && m.IsActive == true).OrderBy(p => p.SortOrder).ToList();
+                return Ok(mapper.Map<List<Models.Message>>(dbMessages));
             }
             catch (Exception ex)
             {
-                logger.LogError($"Failed to get messages: {ex}");
-                return BadRequest("Failed to get messages");
+                return this.BadRequest(logger, "Failed to retrieve messages", ex);
             }
         }
 
         [HttpPost]
-        [ProducesResponseType(201)]
+        [ProducesResponseType(typeof(Models.Message), 201)]
         [ProducesResponseType(400)]
-        public IActionResult Post(MessageViewModel messageVM)
+        public IActionResult AddMessage(Models.Message message)
         {
             try
             {
-                if (messageVM.Id != Guid.Empty)
+                if (message.Id != Guid.Empty)
                 {
                     throw new ValidationException("Invalid parameter (id)");
                 }
-                var message = mapper.Map<MessageViewModel, Message>(messageVM);
-                message.Id = Guid.NewGuid();
-                dbContext.Message.Add(message);
+                var dbMessage = mapper.Map<Message>(message);
+                dbMessage.IsActive = true;
+
+                if (dbMessage.IsPublished)
+                {
+                    dbMessage.SortOrder = 0;
+                    var messages = dbContext.Message.Where(m => m.IsPublished);
+                    foreach (Message bumpedMessage in messages)
+                    {
+                        bumpedMessage.SortOrder = bumpedMessage.SortOrder + 1;
+                    }
+                }
+                dbMessage.Id = Guid.NewGuid();
+                dbContext.Message.Add(dbMessage);
+                if (dbMessage.IsHighlighted && dbMessage.IsPublished)
+                {
+                    var oldHighlights = dbContext.Message.Where(m => m.IsHighlighted == true && m.IsPublished == true);
+                    foreach (Message oldHighlight in oldHighlights)
+                    {
+                        oldHighlight.IsHighlighted = false;
+                    }
+                }
                 dbContext.SaveChanges();
-                return CreatedAtRoute("GetMessage", new { id = message.Id }, mapper.Map<Message, MessageViewModel>(message));
+                return CreatedAtRoute("GetMessage", new { id = dbMessage.Id }, mapper.Map<Models.Message>(dbMessage));
             }
             catch (Exception ex)
             {
-                logger.LogError($"Failed to create message: {ex}");
-                return BadRequest("Failed to create message");
+                return this.BadRequest(logger, "Failed to create message", ex);
             }
         }
 
         [HttpGet("{id}", Name = "GetMessage")]
-        [Produces(typeof(MessageViewModel))]
-        [ProducesResponseType(200)]
+        [Produces(typeof(Models.Message))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        public IActionResult Get(Guid id)
+        public IActionResult GetMessage(Guid id)
         {
             try
             {
-                var message = dbContext.Message.Find(id);
-                if (message != null)
+                var dbMessage = dbContext.Message.Find(id);
+                if (dbMessage != null && dbMessage.IsActive)
                 {
-                    return Ok(mapper.Map<Message, MessageViewModel>(message));
+                    return Ok(mapper.Map<Models.Message>(dbMessage));
                 }
                 return NotFound($"Message not found with id: {id}");
             }
             catch (Exception ex)
             {
-                logger.LogError($"Failed to retrieve message: {ex}");
-                return BadRequest("Failed to retrieve message");
+                return this.BadRequest(logger, "Failed to retrieve message", ex);
             }
         }
 
         [HttpPut("{id}")]
-        [Produces(typeof(MessageViewModel))]
-        [ProducesResponseType(200)]
+        [Produces(typeof(Models.Message))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        public IActionResult Put(Guid id, MessageViewModel messageVM)
+        public IActionResult UpdateMessage(Guid id, Models.Message message)
         {
             try
             {
-                Message dbMessage = dbContext.Message.Find(id);
-                if (dbMessage != null)
+                var dbMessage = dbContext.Message.Find(id);
+                if (dbMessage != null && dbMessage.IsActive)
                 {
-                    dbMessage = mapper.Map(messageVM, dbMessage);
+                    if (!dbMessage.IsPublished && message.IsPublished)
+                    {
+                        message.SortOrder = 0;
+                        var messages = dbContext.Message.Where(m => m.IsPublished);
+                        foreach (Message bumpedMessage in messages)
+                        {
+                            bumpedMessage.SortOrder = bumpedMessage.SortOrder + 1;
+                        }
+                    }
+                    dbMessage = mapper.Map(message, dbMessage);
                     dbMessage.Timestamp = DateTime.Now;
                     dbMessage.Id = id;
                     dbContext.Message.Update(dbMessage);
+                    if (dbMessage.IsHighlighted && dbMessage.IsPublished)
+                    {
+                        var oldHighlights = dbContext.Message.Where(m => m.IsHighlighted == true && m.IsPublished == true && m.Id != dbMessage.Id);
+                        foreach (Message oldHighlight in oldHighlights)
+                        {
+                            oldHighlight.IsHighlighted = false;
+                        }
+                    }
 
                     dbContext.SaveChanges();
-                    return Ok(mapper.Map<Message, MessageViewModel>(dbMessage));
+                    return Ok(mapper.Map<Models.Message>(dbMessage));
                 }
                 return NotFound($"Message not found with id: {id}");
-
             }
             catch (Exception ex)
             {
-                logger.LogError($"Failed to update message: {ex}");
-                return BadRequest("Failed to update message");
+                return this.BadRequest(logger, "Failed to update message", ex);
+            }
+        }
+
+        [HttpDelete("{id}")]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        public IActionResult DeleteMessage(Guid id)
+        {
+            try
+            {
+                var dbMessage = dbContext.Message.Find(id);
+                if (dbMessage != null && dbMessage.IsActive)
+                {
+                    dbMessage.IsActive = false;
+                    dbMessage.Timestamp = DateTime.Now;
+                    dbContext.Message.Update(dbMessage);
+                    dbContext.SaveChanges();
+                    return new NoContentResult();
+                }
+                return NotFound($"Message not found with id: {id}");
+            }
+            catch (Exception ex)
+            {
+                return this.BadRequest(logger, "Failed to delete message", ex);
             }
         }
     }
