@@ -15,24 +15,24 @@ namespace Gcpe.Hub.API.Controllers
     [Route("api/[Controller]")]
     [ApiController]
     [Produces("application/json")]
-    public class ActivitiesController : ControllerBase
+    public class ActivitiesController : BaseController
     {
         private readonly HubDbContext dbContext;
-        private readonly ILogger<ActivitiesController> logger;
         private readonly IMapper mapper;
         private static DateTime? mostFutureForecastActivity = null;
+        static DateTime? lastModified = null;
+        static DateTime lastModifiedNextCheck = DateTime.Now;
 
         public ActivitiesController(HubDbContext dbContext,
             ILogger<ActivitiesController> logger,
             IMapper mapper,
-            IHostingEnvironment env)
+            IHostingEnvironment env) : base(logger)
         {
             this.dbContext = dbContext;
-            this.logger = logger;
             this.mapper = mapper;
             if (env?.IsProduction() == false && !mostFutureForecastActivity.HasValue)
             {
-                mostFutureForecastActivity = Forecast(dbContext).OrderByDescending(a => a.StartDateTime).First().StartDateTime;
+                mostFutureForecastActivity = Forecast(dbContext).Where(a => a.IsActive).OrderByDescending(a => a.StartDateTime).First().StartDateTime;
             }
         }
 
@@ -42,17 +42,19 @@ namespace Gcpe.Hub.API.Controllers
                 .Include(a => a.ActivityCategories).ThenInclude(ac => ac.Category)
                 .Include(a => a.ActivitySharedWith).ThenInclude(sw => sw.Ministry);
         }
+
         private IQueryable<Activity> Forecast(HubDbContext dbContext)
         {
             return QueryAll(dbContext)
-                .Where(a => a.IsConfirmed && a.IsActive && !a.IsConfidential && //a.ActivityKeywords.Any(ak => ak.Keyword.Name.StartsWith("HQ-")) &&
+                .Where(a => a.IsConfirmed && !a.IsConfidential && //a.ActivityKeywords.Any(ak => ak.Keyword.Name.StartsWith("HQ-")) &&
                             a.ActivityCategories.Any(ac => ac.Category.Name.StartsWith("Approved") || ac.Category.Name == "Release Only (No Event)" || ac.Category.Name.EndsWith("with Release")));
         }
 
         [HttpGet("Forecast/{numDays}")]
         [Produces(typeof(IEnumerable<Models.Activity>))]
+        [ProducesResponseType(304)]
         [ProducesResponseType(400)]
-        [ResponseCache(Duration = 300)] // change to 10 when using swagger
+        [ResponseCache(Duration = 60)]
         public IActionResult GetActivityForecast(int numDays)
         {
             try
@@ -63,13 +65,14 @@ namespace Gcpe.Hub.API.Controllers
                 {
                     today = mostFutureForecastActivity.Value.AddDays(today.DayOfWeek - mostFutureForecastActivity.Value.DayOfWeek - 26 * 7); // 26 weeks before the most future activity for testing with a stale db
                 }
-                forecast = forecast.Where(a => a.StartDateTime >= today && a.StartDateTime <= today.AddDays(numDays)).OrderBy(a => a.StartDateTime);
+                forecast = forecast.Where(a => a.StartDateTime >= today && a.StartDateTime <= today.AddDays(numDays));
 
-                return Ok(forecast.Select(a => mapper.Map<Models.Activity>(a)).ToList());
+                IActionResult res = HandleModifiedSince(ref lastModified, ref lastModifiedNextCheck, () => forecast.OrderByDescending(a => a.LastUpdatedDateTime).FirstOrDefault()?.LastUpdatedDateTime);
+                return res ?? Ok(forecast.Where(a => a.IsActive).OrderBy(a => a.StartDateTime).Select(a => mapper.Map<Models.Activity>(a)).ToList());
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to get activities", ex);
+                return BadRequest("Failed to get activities", ex);
             }
         }
 
@@ -91,7 +94,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to get an activity", ex);
+                return BadRequest("Failed to get an activity", ex);
             }
         }
 
@@ -110,7 +113,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to save an activity", ex);
+                return BadRequest("Failed to save an activity", ex);
             }
         }
 
@@ -134,7 +137,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Couldn't update activity", ex);
+                return BadRequest("Couldn't update activity", ex);
             }
         }
     }

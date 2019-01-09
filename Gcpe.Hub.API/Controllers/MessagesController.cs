@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using AutoMapper;
-using Gcpe.Hub.API.Helpers;
 using Gcpe.Hub.Data.Entity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -13,33 +12,36 @@ namespace Gcpe.Hub.API.Controllers
     [Route("api/[Controller]")]
     [ApiController]
     [Produces("application/json")]
-    public class MessagesController : ControllerBase
+    public class MessagesController : BaseController
     {
         private readonly HubDbContext dbContext;
-        private readonly ILogger<MessagesController> logger;
         private readonly IMapper mapper;
+        static DateTime? lastModified = null;
+        static DateTime lastModifiedNextCheck = DateTime.Now;
 
-        public MessagesController(HubDbContext dbContext, ILogger<MessagesController> logger, IMapper mapper)
+        public MessagesController(HubDbContext dbContext, ILogger<MessagesController> logger, IMapper mapper) : base(logger)
         {
             this.dbContext = dbContext;
-            this.logger = logger;
             this.mapper = mapper;
         }
 
         [HttpGet]
         [Produces(typeof(IEnumerable<Models.Message>))]
+        [ProducesResponseType(304)]
         [ProducesResponseType(400)]
-        [ResponseCache(Duration = 30)] // change to 10 when using swagger
+        [ResponseCache(Duration = 5)]
         public IActionResult GetAllMessages([FromQuery(Name = "IsPublished")] bool IsPublished = true)
         {
             try
             {
-                var dbMessages = dbContext.Message.Where(m => m.IsPublished == IsPublished && m.IsActive == true).OrderBy(p => p.SortOrder).ToList();
-                return Ok(mapper.Map<List<Models.Message>>(dbMessages));
+                IQueryable<Message> dbMessages = dbContext.Message;
+
+                IActionResult res = HandleModifiedSince(ref lastModified, ref lastModifiedNextCheck, () => dbMessages.OrderByDescending(p => p.Timestamp).FirstOrDefault()?.Timestamp);
+                return res ?? Ok(mapper.Map<List<Models.Message>>(dbMessages.Where(m => m.IsPublished == IsPublished && m.IsActive).OrderBy(p => p.SortOrder).ToList()));
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to retrieve messages", ex);
+                return BadRequest("Failed to retrieve messages", ex);
             }
         }
 
@@ -67,6 +69,7 @@ namespace Gcpe.Hub.API.Controllers
                     }
                 }
                 dbMessage.Id = Guid.NewGuid();
+                dbMessage.Timestamp = DateTime.Now;
                 dbContext.Message.Add(dbMessage);
                 if (dbMessage.IsHighlighted && dbMessage.IsPublished)
                 {
@@ -81,7 +84,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to create message", ex);
+                return BadRequest("Failed to create message", ex);
             }
         }
 
@@ -102,7 +105,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to retrieve message", ex);
+                return BadRequest("Failed to retrieve message", ex);
             }
         }
 
@@ -146,7 +149,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to update message", ex);
+                return BadRequest("Failed to update message", ex);
             }
         }
 
@@ -171,7 +174,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to delete message", ex);
+                return BadRequest("Failed to delete message", ex);
             }
         }
     }

@@ -16,20 +16,20 @@ namespace Gcpe.Hub.API.Controllers
     [Route("api/[Controller]")]
     [ApiController]
     [Produces("application/json")]
-    public class PostsController : ControllerBase
+    public class PostsController : BaseController
     {
         private readonly HubDbContext dbContext;
-        private readonly ILogger<PostsController> logger;
         private readonly IMapper mapper;
         private readonly bool isProduction;
+        static DateTime? lastModified = null;
+        static DateTime lastModifiedNextCheck = DateTime.Now;
 
         public PostsController(HubDbContext dbContext,
             ILogger<PostsController> logger,
             IMapper mapper,
-            IHostingEnvironment env)
+            IHostingEnvironment env) : base(logger)
         {
             this.dbContext = dbContext;
-            this.logger = logger;
             this.mapper = mapper;
             this.isProduction = env?.IsProduction() != false;
         }
@@ -39,12 +39,13 @@ namespace Gcpe.Hub.API.Controllers
             return dbContext.NewsRelease.Include(p => p.Ministry).Include(p => p.NewsReleaseLanguage).Include(p => p.NewsReleaseMinistry)
                 .Include(p => p.NewsReleaseDocument).ThenInclude(nrd => nrd.NewsReleaseDocumentLanguage)
                 .Include(p => p.NewsReleaseDocument).ThenInclude(nrd => nrd.NewsReleaseDocumentContact)
-                .Where(p => p.IsCommitted && p.IsPublished);
+                .Where(p => p.IsCommitted);
         }
         [NonAction]
-        public IList<Models.Post> GetResultsPage(NewsReleaseParams newsReleaseParams)
+        public IList<Models.Post> GetResultsPage(NewsReleaseParams newsReleaseParams, out int count)
         {
-            var posts = QueryPosts();
+            var posts = QueryPosts().Where(p => p.IsPublished);
+            count = posts.Count(); 
             var pagedPosts = PagedList<NewsRelease>.Create(posts, newsReleaseParams.PageNumber, newsReleaseParams.PageSize);
             return pagedPosts.Select(p => p.ToModel(mapper)).ToList();
         }
@@ -57,34 +58,36 @@ namespace Gcpe.Hub.API.Controllers
         {
             try
             {
-                var count = QueryPosts().Count();
-                var pagedPosts = this.GetResultsPage(postParams);
+                int count;
+                var pagedPosts = GetResultsPage(postParams, out count);
                 Response.AddPagination(postParams.PageNumber, postParams.PageSize, count, 10);
 
                 return Ok(pagedPosts);
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to get all posts", ex);
+                return BadRequest("Failed to get all posts", ex);
             }
         }
 
         [HttpGet("Latest/{numDays}")]
         [Produces(typeof(IEnumerable<Models.Post>))]
+        [ProducesResponseType(304)]
         [ProducesResponseType(400)]
-        [ResponseCache(Duration = 300)] // change to 10 when using swagger
+        [ResponseCache(Duration = 60)]
         public IActionResult GetLatestPosts(int numDays)
         {
             try
             {
-                IQueryable<NewsRelease> latest = QueryPosts().OrderByDescending(p => p.PublishDateTime);
-                latest = isProduction ? latest.Where(p => p.PublishDateTime >= DateTime.Today.AddDays(-numDays)) : latest.Take(20); // for testing with a stale db
+                IQueryable<NewsRelease> latest = isProduction ? QueryPosts().Where(p => p.PublishDateTime >= DateTime.Today.AddDays(-numDays))
+                                                              : QueryPosts().OrderByDescending(p => p.PublishDateTime).Take(20); // 20 for testing with a stale db
 
-                return Ok(latest.Select(p => p.ToModel(mapper)).ToList());
+                IActionResult res = HandleModifiedSince(ref lastModified, ref lastModifiedNextCheck, () => latest.OrderByDescending(p => p.Timestamp).FirstOrDefault()?.Timestamp.LocalDateTime);
+                return res ?? Ok(latest.Where(p => p.IsPublished).OrderByDescending(p => p.PublishDateTime).Select(p => p.ToModel(mapper)).ToList());
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to get latest posts", ex);
+                return BadRequest("Failed to get latest posts", ex);
             }
         }
 
@@ -107,7 +110,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to get post", ex);
+                return BadRequest("Failed to get post", ex);
             }
         }
 
@@ -130,7 +133,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to save a new post", ex);
+                return BadRequest("Failed to save a new post", ex);
             }
         }
 
@@ -155,7 +158,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Couldn't update post", ex);
+                return BadRequest("Couldn't update post", ex);
             }
         }
 

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using AutoMapper;
-using Gcpe.Hub.API.Helpers;
 using Gcpe.Hub.Data.Entity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -13,33 +12,36 @@ namespace Gcpe.Hub.API.Controllers
     [Route("api/[Controller]")]
     [ApiController]
     [Produces("application/json")]
-    public class SocialMediaPostsController : ControllerBase
+    public class SocialMediaPostsController : BaseController
     {
         private readonly HubDbContext dbContext;
-        private readonly ILogger<SocialMediaPostsController> logger;
         private readonly IMapper mapper;
+        static DateTime? lastModified = null;
+        static DateTime lastModifiedNextCheck = DateTime.Now;
 
-        public SocialMediaPostsController(HubDbContext dbContext, ILogger<SocialMediaPostsController> logger, IMapper mapper)
+        public SocialMediaPostsController(HubDbContext dbContext, ILogger<SocialMediaPostsController> logger, IMapper mapper) : base(logger)
         {
             this.dbContext = dbContext;
-            this.logger = logger;
             this.mapper = mapper;
         }
 
         [HttpGet]
         [Produces(typeof(IEnumerable<Models.SocialMediaPost>))]
+        [ProducesResponseType(304)]
         [ProducesResponseType(400)]
-        [ResponseCache(Duration = 30)] // change to 10 when using swagger
+        [ResponseCache(Duration = 5)]
         public IActionResult GetAllSocialMediaPosts()
         {
             try
             {
-                var dbPosts = dbContext.SocialMediaPost.Where(p => p.IsActive).OrderBy(p => p.SortOrder).ToList();
-                return Ok(mapper.Map<List<Models.SocialMediaPost>>(dbPosts));
+                IQueryable<SocialMediaPost> dbPosts = dbContext.SocialMediaPost;
+
+                IActionResult res = HandleModifiedSince(ref lastModified, ref lastModifiedNextCheck, () => dbPosts.OrderByDescending(p => p.Timestamp).FirstOrDefault()?.Timestamp);
+                return res ?? Ok(mapper.Map<List<Models.SocialMediaPost>>(dbPosts.Where(p => p.IsActive).OrderBy(p => p.SortOrder).ToList()));
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to retrieve social media posts", ex);
+                return BadRequest("Failed to retrieve social media posts", ex);
             }
         }
 
@@ -63,7 +65,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to create social media post", ex);
+                return BadRequest("Failed to create social media post", ex);
             }
         }
 
@@ -84,7 +86,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to retrieve social media post", ex);
+                return BadRequest("Failed to retrieve social media post", ex);
             }
         }
 
@@ -110,7 +112,7 @@ namespace Gcpe.Hub.API.Controllers
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to update social media post", ex);
+                return BadRequest("Failed to update social media post", ex);
             }
         }
 
@@ -129,13 +131,13 @@ namespace Gcpe.Hub.API.Controllers
                     dbPost.Timestamp = DateTime.Now;
                     dbContext.SocialMediaPost.Update(dbPost);
                     dbContext.SaveChanges();
-                    return new NoContentResult();
+                    return NoContent();
                 }
                 return NotFound($"Social media post not found with id: {id}");
             }
             catch (Exception ex)
             {
-                return this.BadRequest(logger, "Failed to delete social media post", ex);
+                return BadRequest("Failed to delete social media post", ex);
             }
         }
     }
