@@ -88,7 +88,6 @@ namespace Gcpe.Hub.API
             services.AddHealthChecks(checks =>
             {
                 checks.AddSqlCheck("Gcpe.Hub", Configuration["HubDbContext"]);
-                // checks.AddUrlCheck("https://github.com");
                 checks.AddCheck("Webserver is running", () => HealthCheckResult.Healthy("Ok"));
             });
 
