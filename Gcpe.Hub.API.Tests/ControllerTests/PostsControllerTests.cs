@@ -3,128 +3,103 @@ using System.Linq;
 using AutoMapper;
 using FluentAssertions;
 using Gcpe.Hub.API.Controllers;
-using Gcpe.Hub.API.Data;
 using Gcpe.Hub.API.Helpers;
-using Gcpe.Hub.API.ViewModels;
 using Gcpe.Hub.Data.Entity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
 namespace Gcpe.Hub.API.Tests.ControllerTests
 {
-    public class NewsReleasesControllerTests
+    public class PostsControllerTests
     {
-        private readonly NewsRelease _expectedModelReturn;
-        private Mock<ILogger<NewsReleasesController>> _logger;
-        private Mock<IMapper> _mapper;
+        private Mock<ILogger<PostsController>> logger;
+        private HubDbContext context;
+        private IMapper mapper;
+        private DbContextOptions<HubDbContext> options;
 
-        public NewsReleasesControllerTests()
+        public PostsControllerTests()
         {
             //-----------------------------------------------------------------------------------------------------------
             // Arrange
             //-----------------------------------------------------------------------------------------------------------
-            _expectedModelReturn = TestData.TestNewsRelease;
-            _logger = new Mock<ILogger<NewsReleasesController>>();
-            _mapper = CreateMapper();
+            options = new DbContextOptionsBuilder<HubDbContext>()
+                      .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                      .Options;
+            context = new HubDbContext(options);
+            logger = new Mock<ILogger<PostsController>>();
+            var mockMapper = new MapperConfiguration(cfg =>
+            {
+                cfg.AddProfile(new MappingProfile());
+            });
+            mapper = mockMapper.CreateMapper();
         }
 
-        private Mock<IRepository> CreateDataStore()
+        private PostsController Controller(HubDbContext c = null)
         {
-            var dataStore = new Mock<IRepository>();
-            dataStore.Setup(r => r.GetAllReleases()).Returns(TestData.TestNewsReleases);
-            dataStore.Setup(r => r.GetReleaseByKey("0")).Returns(() => _expectedModelReturn);
-            dataStore.Setup(r => r.GetReleaseByKey(It.IsNotIn("0"))).Returns(() => null);
-            return dataStore;
-        }
-
-        // For unit testing, we are only interested in the following properties:
-        // - Key
-        // - PublishDateTime
-        // - Keywords
-        private Mock<IMapper> CreateMapper()
-        {
-            var mapper = new Mock<IMapper>();
-            mapper.Setup(m => m.Map<NewsRelease, NewsReleaseViewModel>(It.IsAny<NewsRelease>()))
-                .Returns((NewsRelease entity) => new NewsReleaseViewModel
-                {
-                    Key = entity.Key,
-                    PublishDateTime = entity.PublishDateTime,
-                    Keywords = entity.Keywords
-                });
-
-            mapper.Setup(m => m.Map<NewsReleaseViewModel, NewsRelease>(It.IsAny<NewsReleaseViewModel>()))
-                .Returns((NewsReleaseViewModel data) => new NewsRelease
-                {
-                    Key = data.Key,
-                    PublishDateTime = data.PublishDateTime,
-                    Keywords = data.Keywords
-                });
-
-            return mapper;
+            return new PostsController(c ?? context, logger.Object, mapper, null);
         }
 
         [Fact]
-        public void GetById_ShouldReturnSuccess()
+        public void GetByKey_ShouldReturnSuccess()
         {
             //-----------------------------------------------------------------------------------------------------------
             // Arrange
             //-----------------------------------------------------------------------------------------------------------
-            var mockRepository = CreateDataStore();
-            var controller = new NewsReleasesController(mockRepository.Object, _logger.Object, _mapper.Object);
+            var _expectedModelReturn = TestData.CreateDbPost();
+            context.NewsRelease.Add(_expectedModelReturn);
+            context.SaveChanges();
 
             //-----------------------------------------------------------------------------------------------------------
             // Act
             //-----------------------------------------------------------------------------------------------------------
-            var result = controller.GetById("0");
+            var result = Controller().GetPost(_expectedModelReturn.Key);
 
             //-----------------------------------------------------------------------------------------------------------
             // Assert
             //-----------------------------------------------------------------------------------------------------------
             result.Should().BeOfType(typeof(OkObjectResult), "because the read operation should go smoothly");
 
-            var actualValue = ((result as OkObjectResult).Value as NewsReleaseViewModel);
+            var actualValue = ((result as OkObjectResult).Value as Models.Post);
             actualValue.Key.Should().Be(_expectedModelReturn.Key);
             actualValue.PublishDateTime.Should().Be(_expectedModelReturn.PublishDateTime);
-            actualValue.Keywords.Should().Be(_expectedModelReturn.Keywords);
+            actualValue.Summary.Should().Be(_expectedModelReturn.NewsReleaseLanguage.First().Summary);
         }
 
         [Fact]
-        public void GetById_ShouldReturnNotFound_WhenGivenInvalidId()
+        public void GetByKey_ShouldReturnNotFound_WhenGivenInvalidId()
         {
             //-----------------------------------------------------------------------------------------------------------
             // Arrange
             //-----------------------------------------------------------------------------------------------------------
-            var mockRepository = CreateDataStore();
-            var controller = new NewsReleasesController(mockRepository.Object, _logger.Object, _mapper.Object);
 
             //-----------------------------------------------------------------------------------------------------------
             // Act
             //-----------------------------------------------------------------------------------------------------------
-            var result = controller.GetById("-1");  // does not exist...
+            var result = Controller().GetPost("-1");  // does not exist...
 
             //-----------------------------------------------------------------------------------------------------------
             // Assert
             //-----------------------------------------------------------------------------------------------------------
-            result.Should().BeOfType(typeof(NotFoundResult), "because an invalid Id should not yield a result");
+            result.Should().BeOfType(typeof(NotFoundObjectResult), "because an invalid Key should not yield a result");
         }
 
         [Fact]
-        public void GetById_ShouldReturnBadRequest_WhenDataSourceIsUnavailable()
+        public void GetByKey_ShouldReturnBadRequest_WhenDataSourceIsUnavailable()
         {
             //-----------------------------------------------------------------------------------------------------------
             // Arrange
             //-----------------------------------------------------------------------------------------------------------
             var validId = "0";
-            var mockRepository = CreateDataStore();
-            mockRepository.Setup(r => r.GetReleaseByKey(It.IsAny<string>())).Throws<InvalidOperationException>();
-            var controller = new NewsReleasesController(mockRepository.Object, _logger.Object, _mapper.Object);
+            var mockContext = new Mock<HubDbContext>(options);
+            mockContext.Setup(m => m.NewsRelease).Throws(new InvalidOperationException());
 
             //-----------------------------------------------------------------------------------------------------------
             // Act
             //-----------------------------------------------------------------------------------------------------------
-            var result = controller.GetById(validId) as BadRequestObjectResult;
+            var result = Controller(mockContext.Object).GetPost(validId) as BadRequestObjectResult;
 
             //-----------------------------------------------------------------------------------------------------------
             // Assert
@@ -134,21 +109,24 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         }
 
         [Fact]
-        public void GetAllNewsReleases_ShouldReturnSuccess()
+        public void GetAllPosts_ShouldReturnSuccess()
         {
             //-----------------------------------------------------------------------------------------------------------
             // Arrange
             //-----------------------------------------------------------------------------------------------------------
             var paginationParams = new NewsReleaseParams();
             var expectedReleasesPerPage = paginationParams.PageSize;
-            var mockRepository = CreateDataStore();
-            var controller = new NewsReleasesController(mockRepository.Object, _logger.Object, _mapper.Object);
+            for (var i = 0; i < expectedReleasesPerPage; i++)
+            {
+                context.NewsRelease.Add(TestData.CreateDbPost($"2018PREM{i}-{i}00000"));
+            }
+            context.SaveChanges();
 
             //-----------------------------------------------------------------------------------------------------------
             // Act
             //-----------------------------------------------------------------------------------------------------------
-            var results = controller.GetResultsPage(paginationParams);
-            var actualNumberOfReleases = results.Count();
+            int actualNumberOfReleases;
+            var results = Controller().GetResultsPage(paginationParams, out actualNumberOfReleases);
 
             //-----------------------------------------------------------------------------------------------------------
             // Assert
@@ -157,19 +135,18 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         }
 
         [Fact]
-        public void GetAllNewsReleases_ShouldReturnBadRequest_WhenDataSourceIsUnavailable()
+        public void GetAllPosts_ShouldReturnBadRequest_WhenDataSourceIsUnavailable()
         {
             //-----------------------------------------------------------------------------------------------------------
             // Arrange
             //-----------------------------------------------------------------------------------------------------------
-            var mockRepository = CreateDataStore();
-            mockRepository.Setup(r => r.GetAllReleases()).Throws<InvalidOperationException>();
-            var controller = new NewsReleasesController(mockRepository.Object, _logger.Object, _mapper.Object);
+            var mockContext = new Mock<HubDbContext>(options);
+            mockContext.Setup(m => m.NewsRelease).Throws(new InvalidOperationException());
 
             //-----------------------------------------------------------------------------------------------------------
             // Act
             //-----------------------------------------------------------------------------------------------------------
-            var result = controller.GetAll(newsReleaseParams: new NewsReleaseParams()) as BadRequestObjectResult;
+            var result = Controller(mockContext.Object).GetAllPosts(postParams: new NewsReleaseParams()) as BadRequestObjectResult;
 
             //-----------------------------------------------------------------------------------------------------------
             // Assert
@@ -179,32 +156,35 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         }
 
         [Fact]
-        public void Post_ShouldCreateNewEntityAndReturnSuccess()
+        public void Post_ShouldCreateNewPostAndReturnSuccess()
         {
             //-----------------------------------------------------------------------------------------------------------
             // Arrange
             //-----------------------------------------------------------------------------------------------------------
-            var releaseToCreate = new NewsReleaseViewModel
+            var releaseToCreate = new Models.Post
             {
-                Key = TestData.TestNewsRelease.Key,
+                Summary = "toto",
+                Kind = "Release",
                 PublishDateTime = DateTime.Now
             };
-            var mockRepository = CreateDataStore();
-            mockRepository.Setup(r => r.AddEntity(It.IsAny<NewsRelease>())).Verifiable();
-            var controller = new NewsReleasesController(mockRepository.Object, _logger.Object, _mapper.Object);
 
             //-----------------------------------------------------------------------------------------------------------
             // Act
             //-----------------------------------------------------------------------------------------------------------
-            var result = controller.Post(releaseToCreate) as StatusCodeResult;
+            var result = Controller().AddPost(releaseToCreate) as ObjectResult;
 
             //-----------------------------------------------------------------------------------------------------------
             // Assert
             //-----------------------------------------------------------------------------------------------------------
-            result.Should().BeOfType(typeof(StatusCodeResult), "because the create operation should go smoothly");
-            result.StatusCode.Should().Be(201, "because HTTP Status 201 should be returned upon creation of new entity");
+            result.Should().BeOfType<CreatedAtRouteResult>("because the create operation should go smoothly");
+            result.StatusCode.Should().Be(201, "because HTTP Status 201 should be returned upon creation of new post");
+            var model = result.Value as Models.Post;
+            model.Summary.Should().Be(releaseToCreate.Summary);
+            model.Kind.Should().Be(releaseToCreate.Kind);
+
+
             // this will throw if the System-Under-Test (SUT) i.e. the controller didn't call repository.AddEntity(...)
-            mockRepository.Verify();
+            //mockRepository.Verify();
         }
 
         [Fact]
@@ -213,14 +193,13 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             //-----------------------------------------------------------------------------------------------------------
             // Arrange
             //-----------------------------------------------------------------------------------------------------------
-            var mockRepository = CreateDataStore();
-            var controller = new NewsReleasesController(mockRepository.Object, _logger.Object, _mapper.Object);
+            PostsController controller = Controller();
             controller.ModelState.AddModelError("error", "some validation error");
 
             //-----------------------------------------------------------------------------------------------------------
             // Act
             //-----------------------------------------------------------------------------------------------------------
-            var result = controller.Post(model: null) as BadRequestObjectResult;
+            var result = controller.AddPost(post: null) as BadRequestObjectResult;
 
             //-----------------------------------------------------------------------------------------------------------
             // Assert
@@ -235,19 +214,30 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             //-----------------------------------------------------------------------------------------------------------
             // Arrange
             //-----------------------------------------------------------------------------------------------------------
-            var mockRepository = CreateDataStore();
-            mockRepository.Setup(r => r.Update("0", It.IsAny<NewsRelease>())).Returns(_expectedModelReturn);
-            var controller = new NewsReleasesController(mockRepository.Object, _logger.Object, _mapper.Object);
+            var dbPost = TestData.CreateDbPost();
+            context.NewsRelease.Add(dbPost);
+            context.SaveChanges();
+            Models.Post expectedModelReturn = dbPost.ToModel(mapper);
+            expectedModelReturn.Kind = "Release";
+            expectedModelReturn.Summary = "toto";
 
             //-----------------------------------------------------------------------------------------------------------
             // Act
             //-----------------------------------------------------------------------------------------------------------
+<<<<<<< HEAD:Gcpe.Hub.API.Tests/ControllerTests/PostsControllerTests.cs
+
+            var result = Controller().UpdatePost(dbPost.Key, expectedModelReturn) as ObjectResult;
+=======
             var result = controller.Put("0", _mapper.Object.Map<NewsRelease, NewsReleaseViewModel>(_expectedModelReturn));
+>>>>>>> master:Gcpe.Hub.API.Tests/ControllerTests/NewsReleasesControllerTests.cs
 
             //-----------------------------------------------------------------------------------------------------------
             // Assert
             //-----------------------------------------------------------------------------------------------------------
             result.Should().BeOfType(typeof(OkObjectResult), "because the update operation should go smoothly");
+            var model = result.Value as Models.Post;
+            model.Summary.Should().Be(expectedModelReturn.Summary);
+            model.Kind.Should().Be(expectedModelReturn.Kind);
         }
 
         [Fact]
@@ -256,18 +246,21 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             //-----------------------------------------------------------------------------------------------------------
             // Arrange
             //-----------------------------------------------------------------------------------------------------------
-            var mockRepository = CreateDataStore();
-            var controller = new NewsReleasesController(mockRepository.Object, _logger.Object, _mapper.Object);
+            Models.Post testPost = TestData.CreateDbPost("0").ToModel(mapper);
 
             //-----------------------------------------------------------------------------------------------------------
             // Act
             //-----------------------------------------------------------------------------------------------------------
+<<<<<<< HEAD:Gcpe.Hub.API.Tests/ControllerTests/PostsControllerTests.cs
+            var result = Controller().UpdatePost("-1", testPost); // -1 does not exist...
+=======
             var result = controller.Put("-1", _mapper.Object.Map<NewsRelease, NewsReleaseViewModel>(_expectedModelReturn));  // does not exist...
+>>>>>>> master:Gcpe.Hub.API.Tests/ControllerTests/NewsReleasesControllerTests.cs
 
             //-----------------------------------------------------------------------------------------------------------
             // Assert
             //-----------------------------------------------------------------------------------------------------------
-            result.Should().BeOfType(typeof(NotFoundObjectResult), "because a valid Id is required to update an entity");
+            result.Should().BeOfType(typeof(NotFoundObjectResult), "because a valid key is required to update a post");
         }
 
         [Fact]
@@ -276,84 +269,23 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             //-----------------------------------------------------------------------------------------------------------
             // Arrange
             //-----------------------------------------------------------------------------------------------------------
-            var mockRepository = CreateDataStore();
-            mockRepository.Setup(r => r.GetReleaseByKey(It.IsAny<string>())).Throws<InvalidOperationException>();
-            var controller = new NewsReleasesController(mockRepository.Object, _logger.Object, _mapper.Object);
+            Models.Post testPost = TestData.CreateDbPost().ToModel(mapper);
 
+            var mockContext = new Mock<HubDbContext>(options);
+            mockContext.Setup(m => m.NewsRelease).Throws(new InvalidOperationException());
             //-----------------------------------------------------------------------------------------------------------
             // Act
             //-----------------------------------------------------------------------------------------------------------
+<<<<<<< HEAD:Gcpe.Hub.API.Tests/ControllerTests/PostsControllerTests.cs
+            var result = Controller(mockContext.Object).UpdatePost(testPost.Key, testPost) as ObjectResult;
+=======
             var result = controller.Put("0", _mapper.Object.Map<NewsRelease, NewsReleaseViewModel>(_expectedModelReturn)) as BadRequestObjectResult;
+>>>>>>> master:Gcpe.Hub.API.Tests/ControllerTests/NewsReleasesControllerTests.cs
 
             //-----------------------------------------------------------------------------------------------------------
             // Assert
             //-----------------------------------------------------------------------------------------------------------
             result.Should().BeOfType(typeof(BadRequestObjectResult), "because the update operation should require a valid data source");
-            result.StatusCode.Should().Be(400, "because HTTP Status 400 should be returned to signal a Bad Request");
-        }
-
-        [Fact]
-        public void Delete_ShouldDeleteEntityAndReturnSuccess()
-        {
-            //-----------------------------------------------------------------------------------------------------------
-            // Arrange
-            //-----------------------------------------------------------------------------------------------------------
-            var mockRepository = CreateDataStore();
-            mockRepository.Setup(r => r.Delete(It.IsAny<NewsRelease>())).Verifiable();
-            var controller = new NewsReleasesController(mockRepository.Object, _logger.Object, _mapper.Object);
-
-            //-----------------------------------------------------------------------------------------------------------
-            // Act
-            //-----------------------------------------------------------------------------------------------------------
-            var result = controller.Delete("0");
-
-            //-----------------------------------------------------------------------------------------------------------
-            // Assert
-            //-----------------------------------------------------------------------------------------------------------
-            result.Should().BeOfType(typeof(OkResult), "because the delete operation should go smoothly");
-            // this will throw if the System-Under-Test (SUT) i.e. the controller didn't call repository.Delete(...)
-            mockRepository.Verify();
-        }
-
-        [Fact]
-        public void Delete_ShouldReturnNotFound_WhenGivenInvalidId()
-        {
-            //-----------------------------------------------------------------------------------------------------------
-            // Arrange
-            //-----------------------------------------------------------------------------------------------------------
-            var mockRepository = CreateDataStore();
-            var controller = new NewsReleasesController(mockRepository.Object, _logger.Object, _mapper.Object);
-
-            //-----------------------------------------------------------------------------------------------------------
-            // Act
-            //-----------------------------------------------------------------------------------------------------------
-            var result = controller.Delete("-1");  // does not exist...
-
-            //-----------------------------------------------------------------------------------------------------------
-            // Assert
-            //-----------------------------------------------------------------------------------------------------------
-            result.Should().BeOfType(typeof(NotFoundObjectResult), "because a valid Id is required to delete an entity");
-        }
-
-        [Fact]
-        public void Delete_ShouldReturnBadRequest_WhenDataSourceIsUnavailable()
-        {
-            //-----------------------------------------------------------------------------------------------------------
-            // Arrange
-            //-----------------------------------------------------------------------------------------------------------
-            var mockRepository = CreateDataStore();
-            mockRepository.Setup(r => r.GetReleaseByKey(It.IsAny<string>())).Throws<InvalidOperationException>();
-            var controller = new NewsReleasesController(mockRepository.Object, _logger.Object, _mapper.Object);
-
-            //-----------------------------------------------------------------------------------------------------------
-            // Act
-            //-----------------------------------------------------------------------------------------------------------
-            var result = controller.Delete("0") as BadRequestObjectResult;
-
-            //-----------------------------------------------------------------------------------------------------------
-            // Assert
-            //-----------------------------------------------------------------------------------------------------------
-            result.Should().BeOfType(typeof(BadRequestObjectResult), "because the delete operation should require a valid data source");
             result.StatusCode.Should().Be(400, "because HTTP Status 400 should be returned to signal a Bad Request");
         }
     }
