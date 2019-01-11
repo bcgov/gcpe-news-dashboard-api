@@ -60,7 +60,6 @@ node {
 
   /* Deploy stage (DEV)
       -
-      -
   */
   stage('Deploy to ' + TAG_NAMES[0]) {
     def ENVIRONMENT = TAG_NAMES[0]
