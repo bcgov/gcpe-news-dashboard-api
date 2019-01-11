@@ -146,6 +146,11 @@ parameters:
     description: The server timezone
     required: true
     value: America/Vancouver
+  - name: HubDbContext
+    displayName: HubDbContext
+    description: The database connection string
+    required: false
+    value: ''
   - name: CPU_LIMIT
     displayName: CPU Limit
     description: Maximum amount of CPU the container can use.
