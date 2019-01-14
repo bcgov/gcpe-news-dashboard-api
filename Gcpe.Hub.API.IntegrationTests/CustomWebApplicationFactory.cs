@@ -1,10 +1,4 @@
-<<<<<<< HEAD
-﻿using Gcpe.Hub.Data.Entity;
-=======
-﻿using System;
-using Gcpe.Hub.API.IntegrationTests.Helpers;
 using Gcpe.Hub.Data.Entity;
->>>>>>> master
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
