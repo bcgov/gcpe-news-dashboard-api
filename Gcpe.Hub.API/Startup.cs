@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Gcpe.Hub.Data.Entity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;

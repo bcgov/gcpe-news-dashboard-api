@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -154,4 +154,3 @@ namespace Gcpe.Hub.API.IntegrationTests.Views
         }
     }
 }
-
