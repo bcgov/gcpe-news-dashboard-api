@@ -224,8 +224,12 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             //-----------------------------------------------------------------------------------------------------------
             // Act
             //-----------------------------------------------------------------------------------------------------------
+<<<<<<< HEAD:Gcpe.Hub.API.Tests/ControllerTests/PostsControllerTests.cs
 
             var result = Controller().UpdatePost(dbPost.Key, expectedModelReturn) as ObjectResult;
+=======
+            var result = controller.Put("0", _mapper.Object.Map<NewsRelease, NewsReleaseViewModel>(_expectedModelReturn));
+>>>>>>> master:Gcpe.Hub.API.Tests/ControllerTests/NewsReleasesControllerTests.cs
 
             //-----------------------------------------------------------------------------------------------------------
             // Assert
@@ -247,7 +251,11 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             //-----------------------------------------------------------------------------------------------------------
             // Act
             //-----------------------------------------------------------------------------------------------------------
+<<<<<<< HEAD:Gcpe.Hub.API.Tests/ControllerTests/PostsControllerTests.cs
             var result = Controller().UpdatePost("-1", testPost); // -1 does not exist...
+=======
+            var result = controller.Put("-1", _mapper.Object.Map<NewsRelease, NewsReleaseViewModel>(_expectedModelReturn));  // does not exist...
+>>>>>>> master:Gcpe.Hub.API.Tests/ControllerTests/NewsReleasesControllerTests.cs
 
             //-----------------------------------------------------------------------------------------------------------
             // Assert
@@ -268,7 +276,11 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             //-----------------------------------------------------------------------------------------------------------
             // Act
             //-----------------------------------------------------------------------------------------------------------
+<<<<<<< HEAD:Gcpe.Hub.API.Tests/ControllerTests/PostsControllerTests.cs
             var result = Controller(mockContext.Object).UpdatePost(testPost.Key, testPost) as ObjectResult;
+=======
+            var result = controller.Put("0", _mapper.Object.Map<NewsRelease, NewsReleaseViewModel>(_expectedModelReturn)) as BadRequestObjectResult;
+>>>>>>> master:Gcpe.Hub.API.Tests/ControllerTests/NewsReleasesControllerTests.cs
 
             //-----------------------------------------------------------------------------------------------------------
             // Assert

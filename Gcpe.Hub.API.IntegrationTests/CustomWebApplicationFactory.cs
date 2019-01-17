@@ -1,4 +1,4 @@
-﻿using Gcpe.Hub.Data.Entity;
+using Gcpe.Hub.Data.Entity;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
