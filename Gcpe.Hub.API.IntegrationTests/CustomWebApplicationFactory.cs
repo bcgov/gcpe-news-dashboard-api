@@ -11,6 +11,7 @@ namespace Gcpe.Hub.API.IntegrationTests
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
+            builder.UseStartup<TestStartup>();
             builder.ConfigureServices(services =>
             {
                 var serviceProvider = new ServiceCollection()
