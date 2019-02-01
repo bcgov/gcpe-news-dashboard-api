@@ -8,10 +8,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Gcpe.Hub.API.Helpers;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Gcpe.Hub.API.Controllers
 {
-    // TODO: Re-enable this ==> [Authorize]
     [Route("api/[Controller]")]
     [ApiController]
     [Produces("application/json")]
@@ -103,6 +103,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "WriteAccess")]
         [ProducesResponseType(typeof(Models.Activity), 201)]
         [ProducesResponseType(400)]
         public IActionResult AddActivity([FromBody]Models.Activity activity)
@@ -122,6 +123,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = "WriteAccess")]
         [Produces(typeof(Models.Activity))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]

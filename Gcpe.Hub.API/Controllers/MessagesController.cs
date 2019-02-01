@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using AutoMapper;
 using Gcpe.Hub.Data.Entity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -69,6 +70,7 @@ namespace Gcpe.Hub.API.Controllers
         [HttpPost]
         [ProducesResponseType(typeof(Models.Message), 201)]
         [ProducesResponseType(400)]
+        [Authorize(Policy = "WriteAccess")]
         public IActionResult AddMessage(Models.Message message)
         {
             try
@@ -122,6 +124,7 @@ namespace Gcpe.Hub.API.Controllers
         [Produces(typeof(Models.Message))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
+        [Authorize(Policy = "WriteAccess")]
         public IActionResult UpdateMessage(Guid id, Models.Message message)
         {
             try
@@ -170,6 +173,7 @@ namespace Gcpe.Hub.API.Controllers
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
+        [Authorize(Policy = "WriteAccess")]
         public IActionResult DeleteMessage(Guid id)
         {
             try
