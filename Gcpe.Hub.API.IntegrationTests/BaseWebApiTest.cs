@@ -2,6 +2,7 @@
 using Xunit;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Gcpe.Hub.API;
+using Microsoft.AspNetCore.Hosting;
 
 namespace Gcpe.Hub.API.IntegrationTests
 {
