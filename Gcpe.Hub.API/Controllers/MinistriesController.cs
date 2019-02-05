@@ -36,7 +36,7 @@ namespace Gcpe.Hub.API.Controllers
                 IQueryable<Ministry> dbMinistries = dbContext.Ministry;
 
                 IActionResult res = HandleModifiedSince(ref lastModified, ref lastModifiedNextCheck, () => dbMinistries.OrderByDescending(p => p.Timestamp).FirstOrDefault()?.Timestamp);
-                return res ?? Ok(mapper.Map<List<Models.Ministry>>(dbMinistries.Where(m => m.IsActive).OrderBy(m => m.DisplayName).ThenByDescending(p => p.Timestamp).ToList()));
+                return res ?? Ok(mapper.Map<List<Models.Ministry>>(dbMinistries.Where(m => m.IsActive).OrderBy(m => m.SortOrder).ThenByDescending(m => m.DisplayName).ToList()));
             }
             catch (Exception ex)
             {
