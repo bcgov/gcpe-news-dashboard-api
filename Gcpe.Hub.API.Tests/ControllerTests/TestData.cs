@@ -121,5 +121,17 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
                 IsActive = isActive
             };
         }
+
+        public static Ministry CreateDbMinistries(string displayName, Guid? id = null, bool isActive = true, int sortOrder = 0)
+        {
+            return new Ministry
+            {
+                Id = id ?? Guid.Empty,
+                DisplayName = displayName,
+                SortOrder = sortOrder,
+                Timestamp = DateTime.Now,
+                IsActive = isActive
+            };
+        }
     }
 }
