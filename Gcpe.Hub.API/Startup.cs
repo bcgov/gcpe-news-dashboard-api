@@ -58,7 +58,12 @@ namespace Gcpe.Hub.API
                 {
                     Type = "oauth2",
                     Flow = "implicit",
-                    AuthorizationUrl = Configuration["Jwt:AuthorizationUrl"]
+                    AuthorizationUrl = Configuration["Jwt:AuthorizationUrl"],
+                    Scopes = new Dictionary<string, string>
+                    {
+                        { "ReadAccess", "Access read operations" },
+                        { "WriteAccess", "Access write operations" }
+                    }
                 });
                 setupAction.OperationFilter<SecurityRequirementsOperationFilter>();
                 setupAction.OperationFilter<OperationIdCorrectionFilter>();
