@@ -24,6 +24,7 @@ namespace Gcpe.Hub.API.IntegrationTests
 
             services.AddAuthorization(options =>
             {
+                options.AddPolicy("ReadAccess", policy => { policy.RequireAssertion(p => { return true; }); });
                 options.AddPolicy("WriteAccess", policy => { policy.RequireAssertion(p => { return true; }); });
             });
         }

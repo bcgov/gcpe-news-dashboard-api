@@ -27,6 +27,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = "ReadAccess")]
         [Produces(typeof(IEnumerable<Models.SocialMediaPost>))]
         [ProducesResponseType(304)]
         [ProducesResponseType(400)]
@@ -73,6 +74,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpGet("{id}", Name = "GetSocialMediaPost")]
+        [Authorize(Policy = "ReadAccess")]
         [Produces(typeof(Models.SocialMediaPost))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]

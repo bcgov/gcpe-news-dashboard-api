@@ -100,6 +100,7 @@ namespace Gcpe.Hub.API
 
             services.AddAuthorization(options =>
             {
+                options.AddPolicy("ReadAccess", policy => policy.RequireClaim("user_roles", new string[] { "Administrators", "Contributors", "Viewers" }));
                 options.AddPolicy("WriteAccess", policy => policy.RequireClaim("user_roles", new string[] { "Administrators", "Contributors" }));
             });
         }

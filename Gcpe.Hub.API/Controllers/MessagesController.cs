@@ -27,6 +27,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = "ReadAccess")]
         [Produces(typeof(IEnumerable<Models.Message>))]
         [ProducesResponseType(304)]
         [ProducesResponseType(400)]
@@ -47,6 +48,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpGet("{id}", Name = "GetMessage")]
+        [Authorize(Policy = "ReadAccess")]
         [Produces(typeof(Models.Message))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
@@ -68,9 +70,9 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "WriteAccess")]
         [ProducesResponseType(typeof(Models.Message), 201)]
         [ProducesResponseType(400)]
-        [Authorize(Policy = "WriteAccess")]
         public IActionResult AddMessage(Models.Message message)
         {
             try
@@ -121,10 +123,10 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = "WriteAccess")]
         [Produces(typeof(Models.Message))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        [Authorize(Policy = "WriteAccess")]
         public IActionResult UpdateMessage(Guid id, Models.Message message)
         {
             try
@@ -170,10 +172,10 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = "WriteAccess")]
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        [Authorize(Policy = "WriteAccess")]
         public IActionResult DeleteMessage(Guid id)
         {
             try

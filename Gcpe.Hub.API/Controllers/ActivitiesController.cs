@@ -51,6 +51,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpGet("Forecast/{numDays}")]
+        [Authorize(Policy = "ReadAccess")]
         [Produces(typeof(IEnumerable<Models.Activity>))]
         [ProducesResponseType(304)]
         [ProducesResponseType(400)]
@@ -81,6 +82,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Policy = "ReadAccess")]
         [Produces(typeof(Models.Activity))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
