@@ -5,14 +5,15 @@ using System.Linq;
 using AutoMapper;
 using Gcpe.Hub.API.Helpers;
 using Gcpe.Hub.Data.Entity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Gcpe.Hub.API.Controllers
 {
-    // TODO: Re-enable this ==> [Authorize]
     [Route("api/[Controller]")]
     [ApiController]
     [Produces("application/json")]
@@ -80,12 +81,12 @@ namespace Gcpe.Hub.API.Controllers
             try
             {
                 var today = DateTime.Today;
-                IQueryable<NewsRelease> latest = isProduction ? QueryPosts().Where(p => p.PublishDateTime >= today.AddDays(-numDays))
-                                                              : QueryPosts().OrderByDescending(p => p.PublishDateTime).Take(20); // 20 for testing with a stale db
+                IQueryable<NewsRelease> latest = isProduction ? QueryPosts().Where(p => p.ReleaseType <= ReleaseType.Story && p.PublishDateTime >= today.AddDays(-numDays)) // Releases or Stories
+                                                              : QueryPosts().Where(p => p.ReleaseType <= ReleaseType.Story).OrderByDescending(p => p.PublishDateTime).Take(20); // 20 for testing with a stale db
 
                 if (lastModifiedNextCheck.Date != today)
                 {
-                    lastModified = null; // force refresh after midnight
+                    Request.GetTypedHeaders().IfModifiedSince = null; // force refresh after midnight
                 }
 
                 IActionResult res = HandleModifiedSince(ref lastModified, ref lastModifiedNextCheck, () => latest.OrderByDescending(p => p.Timestamp).FirstOrDefault()?.Timestamp.LocalDateTime);
@@ -121,6 +122,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "WriteAccess")]
         [ProducesResponseType(typeof(Models.Post), 201)]
         [ProducesResponseType(400)]
         public IActionResult AddPost(Models.Post post)
@@ -144,6 +146,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpPut("{key}")]
+        [Authorize(Policy = "WriteAccess")]
         [Produces(typeof(Models.Post))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]

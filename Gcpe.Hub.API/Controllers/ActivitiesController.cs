@@ -2,16 +2,17 @@
 using System.Collections.Generic;
 using System.Linq;
 using AutoMapper;
+using Gcpe.Hub.API.Helpers;
 using Gcpe.Hub.Data.Entity;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Gcpe.Hub.API.Helpers;
-using Microsoft.AspNetCore.Hosting;
 
 namespace Gcpe.Hub.API.Controllers
 {
-    // TODO: Re-enable this ==> [Authorize]
     [Route("api/[Controller]")]
     [ApiController]
     [Produces("application/json")]
@@ -51,6 +52,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpGet("Forecast/{numDays}")]
+        [Authorize(Policy = "ReadAccess")]
         [Produces(typeof(IEnumerable<Models.Activity>))]
         [ProducesResponseType(304)]
         [ProducesResponseType(400)]
@@ -63,7 +65,7 @@ namespace Gcpe.Hub.API.Controllers
                 var today = DateTime.Today;
                 if (lastModifiedNextCheck.Date != today)
                 {
-                    lastModified = null; // force refresh after midnight
+                    Request.GetTypedHeaders().IfModifiedSince = null; // force refresh after midnight
                 }
                 if (mostFutureForecastActivity.HasValue)
                 {
@@ -81,6 +83,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Policy = "ReadAccess")]
         [Produces(typeof(Models.Activity))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
@@ -103,6 +106,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "WriteAccess")]
         [ProducesResponseType(typeof(Models.Activity), 201)]
         [ProducesResponseType(400)]
         public IActionResult AddActivity([FromBody]Models.Activity activity)
@@ -122,6 +126,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = "WriteAccess")]
         [Produces(typeof(Models.Activity))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]

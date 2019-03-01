@@ -1,11 +1,14 @@
-﻿using System.Data.SqlClient;
+﻿using System.Collections.Generic;
+using System.Data.SqlClient;
 using AutoMapper;
+using Gcpe.Hub.API.Helpers;
 using Gcpe.Hub.Data.Entity;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.AzureAD.UI;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.EntityFrameworkCore;
@@ -38,42 +41,14 @@ namespace Gcpe.Hub.API
             services.AddDbContext<HubDbContext>(options => options.UseSqlServer(Configuration["HubDbContext"])
                 .ConfigureWarnings(warnings => warnings.Throw(RelationalEventId.QueryClientEvaluationWarning)));
 
+            this.ConfigureAuth(services);
 
             services.AddMvc()
-                .AddJsonOptions(opt => opt.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore)
+                .AddJsonOptions(opt => {
+                    opt.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+                    opt.SerializerSettings.DateTimeZoneHandling = DateTimeZoneHandling.Local;
+                })
                 .SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
-
-            services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            }).AddJwtBearer(o =>
-            {
-                o.Authority = Configuration["Jwt:Authority"];
-                o.Audience = Configuration["Jwt:Audience"];
-                o.Events = new JwtBearerEvents()
-                {
-                    OnAuthenticationFailed = ctx =>
-                    {
-                        ctx.NoResult();
-
-                        ctx.Response.StatusCode = 500;
-                        ctx.Response.ContentType = "text/plain";
-                        if (Environment.IsDevelopment())
-                        {
-                            return ctx.Response.WriteAsync(ctx.Exception.ToString());
-                        }
-
-                        return ctx.Response.WriteAsync("An error occurred processing your authentication");
-                    }
-                };
-            });
-
-            services.AddAuthorization(options =>
-            {
-                options.AddPolicy("Administrator", policy => policy.RequireClaim("user_roles", "[Administrators]"));
-            });
-
 
 
             services.AddSwaggerGen(setupAction =>
@@ -84,6 +59,19 @@ namespace Gcpe.Hub.API
                     Title = "BC Gov Hub API service",
                     Description = "The .Net Core API for the Hub"
                 });
+                setupAction.AddSecurityDefinition("oauth2", new OAuth2Scheme
+                {
+                    Type = "oauth2",
+                    Flow = "implicit",
+                    AuthorizationUrl = Configuration["AzureAd:AuthorizationUrl"],
+                    Scopes = new Dictionary<string, string>
+                    {
+                        { "openid", "openid login scope" },
+                        { "profile", "profile scope" },
+                        { "email", "email scope" },
+                    }
+                });
+                setupAction.OperationFilter<SecurityRequirementsOperationFilter>();
                 setupAction.OperationFilter<OperationIdCorrectionFilter>();
             });
 
@@ -107,6 +95,27 @@ namespace Gcpe.Hub.API
                 .AddCheck("Webserver is running", () => HealthCheckResult.Healthy("Ok"));
 
             services.AddCors();
+        }
+
+        public virtual void ConfigureAuth(IServiceCollection services)
+        {
+            services.AddAuthentication(AzureADDefaults.BearerAuthenticationScheme)
+                .AddAzureADBearer(options => Configuration.Bind("AzureAd", options));
+                
+            services.Configure<JwtBearerOptions>(AzureADDefaults.JwtBearerAuthenticationScheme, options =>
+            {
+                options.Authority = options.Authority + "/v2.0/";
+                options.TokenValidationParameters.ValidAudiences = new string[] { options.Audience, $"api://{options.Audience}" };
+                options.TokenValidationParameters.IssuerValidator = AadIssuerValidator.ValidateAadIssuer;
+            });
+
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy("ReadAccess", policy => policy.RequireRole("Viewer", "Contributor"));
+                options.AddPolicy("WriteAccess", policy => policy.RequireRole("Contributor"));
+            });
+
+
         }
 
         private class OperationIdCorrectionFilter : IOperationFilter
@@ -137,7 +146,7 @@ namespace Gcpe.Hub.API
             // app.UseHttpsRedirection();
 
             // temporary CORS fix
-            app.UseCors(opts => opts.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            app.UseCors(opts => opts.AllowAnyMethod().AllowAnyHeader().SetIsOriginAllowed((host) => true).AllowCredentials());
 
             app.UseAuthentication();
 
@@ -146,6 +155,7 @@ namespace Gcpe.Hub.API
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
+                c.OAuthClientId(Configuration["AzureAd:ClientId"]);
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "BC Gov Hub API service");
             });
         }
