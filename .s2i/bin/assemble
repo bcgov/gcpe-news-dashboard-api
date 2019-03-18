@@ -126,7 +126,7 @@ for TEST_PROJECT in $DOTNET_TEST_PROJECTS; do
 done
 
 # get the text after the last dash in the openshift build name.
-BUILDNUMBER=${OPENSHIFT_BUILD_NAME##*-} 
+BUILDNUMBER=${OPENSHIFT_BUILD_NAME##*-}
 if [ -z $VERSION_PREFIX ]; then
   VERSION_PREFIX=1.0.0
 fi
@@ -147,7 +147,7 @@ elif [ -n "$SNYK_TOKEN" ]; then
 	snyk test --file="$DOTNET_STARTUP_PROJECT"
 elif [ -n "$DOTNET_TEST" ]; then
 	dotnet test "$DOTNET_STARTUP_PROJECT" -f "$DOTNET_FRAMEWORK" -c "$DOTNET_CONFIGURATION"
-else	
+else
 	# build and publish the application for production usage
 	echo "---> Publishing application..."
 	dotnet publish /m:1 "$DOTNET_STARTUP_PROJECT" -f "$DOTNET_FRAMEWORK" -c "$DOTNET_CONFIGURATION" \
