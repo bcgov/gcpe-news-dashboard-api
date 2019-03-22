@@ -45,7 +45,6 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             {
                 HttpContext = httpContext,
             };
-
             controller = new UserPreferencesController(context, logger.Object, mapper);
             controller.ControllerContext = controllerContext;
         }
@@ -61,7 +60,7 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             var token = generateToken(TokenType.Valid, email, "Test User");
             controller.Request.Headers["Authorization"] = $"Bearer {token}";
 
-            var result = controller.GetUserMinistryPreferences(false) as ObjectResult;
+            var result = controller.GetUserMinistryPreferences() as ObjectResult;
             result.Should().BeOfType<OkObjectResult>();
             result.StatusCode.Should().Be(200);
             result.Value.Should().BeOfType<List<string>>();
@@ -77,7 +76,7 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             var token = generateToken(TokenType.Valid, "no_prefs@gov.bc.ca", "No Prefs User");
             controller.Request.Headers["Authorization"] = $"Bearer {token}";
 
-            var result = controller.GetUserMinistryPreferences(false) as ObjectResult;
+            var result = controller.GetUserMinistryPreferences() as ObjectResult;
             result.Should().BeOfType<NotFoundObjectResult>();
             result.StatusCode.Should().Be(404);
         }
@@ -92,11 +91,10 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             var token = generateToken(TokenType.Invalid);
             controller.Request.Headers["Authorization"] = $"Bearer {token}";
 
-            var result = controller.GetUserMinistryPreferences(false) as ObjectResult;
+            var result = controller.GetUserMinistryPreferences() as ObjectResult;
             result.Should().BeOfType<BadRequestObjectResult>();
             result.StatusCode.Should().Be(400);
         }
-
 
         [Fact]
         public void Post_ShouldReturnSuccess()

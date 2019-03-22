@@ -32,20 +32,15 @@ namespace Gcpe.Hub.API.Controllers
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         [ResponseCache(Duration = 5)]
-        public IActionResult GetUserMinistryPreferences(bool getAbbreviations = false)
+        public IActionResult GetUserMinistryPreferences()
         {
             try
             {
                 var email = GetEmailAddressFromAuthorizationHeader(Request.Headers["Authorization"]);
                 var dbUserMinistryPrefs = dbContext.UserMinistryPreference.Include(m => m.Ministry).Where(p => p.Email == email).ToList();
                 if (dbUserMinistryPrefs.Any())
-                {
-                    if (getAbbreviations == true)
-                    {
-                        return Ok(dbUserMinistryPrefs.Select(p => p.Ministry.Abbreviation).ToList());
-                    }
-                    return Ok(dbUserMinistryPrefs.Select(p => p.Ministry.DisplayName).ToList());
-                }
+                    return Ok(dbUserMinistryPrefs.Select(p => p.Ministry.Key).ToList());
+
                 return NotFound($"Could not find preferences for user with email address: {email}");
             }
             catch (Exception ex)
