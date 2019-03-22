@@ -36,7 +36,7 @@ namespace Gcpe.Hub.API.Controllers
         {
             try
             {
-                var email = GetEmailAddressFromAuthorizationHeader(Request.Headers["Authorization"].FirstOrDefault().Split(' ')[1]);
+                var email = GetEmailAddressFromAuthorizationHeader(Request.Headers["Authorization"]);
                 var dbUserMinistryPrefs = dbContext.UserMinistryPreference.Include(m => m.Ministry).Where(p => p.Email == email).ToList();
                 if (dbUserMinistryPrefs.Any())
                 {
