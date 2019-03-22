@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 namespace Gcpe.Hub.API.Controllers
 {
@@ -35,16 +36,15 @@ namespace Gcpe.Hub.API.Controllers
         {
             try
             {
-                var email = GetEmailAddressFromJWT(Request.Headers["Authorization"].FirstOrDefault().Split(' ')[1]);
+                var email = GetEmailAddressFromAuthorizationHeader(Request.Headers["Authorization"].FirstOrDefault().Split(' ')[1]);
                 var dbUserMinistryPrefs = dbContext.UserMinistryPreference.Include(m => m.Ministry).Where(p => p.Email == email).ToList();
                 if (dbUserMinistryPrefs.Any())
                 {
-                    var prefs = dbUserMinistryPrefs.Select(p => p.Ministry.DisplayName).ToList();
                     if (getAbbreviations == true)
                     {
-                        prefs = dbUserMinistryPrefs.Select(p => p.Ministry.Abbreviation).ToList();
+                        return Ok(dbUserMinistryPrefs.Select(p => p.Ministry.Abbreviation).ToList());
                     }
-                    return Ok(prefs);
+                    return Ok(dbUserMinistryPrefs.Select(p => p.Ministry.DisplayName).ToList());
                 }
                 return NotFound($"Could not find preferences for user with email address: {email}");
             }
@@ -62,7 +62,8 @@ namespace Gcpe.Hub.API.Controllers
         {
             try
             {
-                var email = GetEmailAddressFromJWT(Request.Headers["Authorization"].FirstOrDefault().Split(' ')[1]);
+                var header = Request.Headers["Authorization"];
+                var email = GetEmailAddressFromAuthorizationHeader(Request.Headers["Authorization"]);
                 var dbUserMinistryPrefs = dbContext.UserMinistryPreference.Include(m => m.Ministry).Where(p => p.Email == email).ToList();
                 dbContext.RemoveRange(dbUserMinistryPrefs);
 
@@ -83,6 +84,9 @@ namespace Gcpe.Hub.API.Controllers
             }
         }
 
-        private string GetEmailAddressFromJWT(string accessToken) => new JwtSecurityToken(accessToken)?.Claims.First(claim => claim.Type == "preferred_username").Value; // the preferred_username claim will differ depending on the auth provider
+        private string GetEmailAddressFromAuthorizationHeader(StringValues authorizationHeader)
+            => new JwtSecurityToken(
+                authorizationHeader.FirstOrDefault().Split(' ')[1])?.Claims
+                    .First(claim => claim.Type == "preferred_username").Value; // the preferred_username claim will differ depending on the auth provider
     }
 }
