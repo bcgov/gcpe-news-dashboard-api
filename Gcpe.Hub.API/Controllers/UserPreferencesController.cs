@@ -30,7 +30,6 @@ namespace Gcpe.Hub.API.Controllers
         [Authorize(Policy = "ReadAccess")]
         [Produces(typeof(string[]))]
         [ProducesResponseType(400)]
-        [ProducesResponseType(404)]
         [ResponseCache(Duration = 5)]
         public IActionResult GetUserMinistryPreferences()
         {
