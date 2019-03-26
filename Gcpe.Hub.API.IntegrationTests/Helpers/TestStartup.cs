@@ -21,12 +21,6 @@ namespace Gcpe.Hub.API.IntegrationTests
                 options.DefaultAuthenticateScheme = "Test Scheme";
                 options.DefaultChallengeScheme = "Test Scheme";
             }).AddTestAuth(o => { });
-
-            services.AddAuthorization(options =>
-            {
-                options.AddPolicy("ReadAccess", policy => { policy.RequireAssertion(p => { return true; }); });
-                options.AddPolicy("WriteAccess", policy => { policy.RequireAssertion(p => { return true; }); });
-            });
         }
 
         public override void ConfigureKeycloakAuth(IServiceCollection services)
@@ -36,7 +30,10 @@ namespace Gcpe.Hub.API.IntegrationTests
                 options.DefaultAuthenticateScheme = "Test Scheme";
                 options.DefaultChallengeScheme = "Test Scheme";
             }).AddTestAuth(o => { });
+        }
 
+        public override void ConfigureAuthorizationPolicies(IServiceCollection services)
+        {
             services.AddAuthorization(options =>
             {
                 options.AddPolicy("ReadAccess", policy => { policy.RequireAssertion(p => { return true; }); });

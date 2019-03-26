@@ -45,7 +45,7 @@ namespace Gcpe.Hub.API
             services.AddDbContext<HubDbContext>(options => options.UseSqlServer(Configuration["HubDbContext"])
                 .ConfigureWarnings(warnings => warnings.Throw(RelationalEventId.QueryClientEvaluationWarning)));
 
-            if(Configuration["AuthType"] == "Azure")
+            if(Configuration["AuthType"] == "AzureAD")
             {
                 this.ConfigureAzureAuth(services);
             }
@@ -53,7 +53,7 @@ namespace Gcpe.Hub.API
             {
                 this.ConfigureKeycloakAuth(services);
             }
-
+            this.ConfigureAuthorizationPolicies(services);
 
             services.AddMvc()
                 .AddJsonOptions(opt => {
@@ -75,7 +75,9 @@ namespace Gcpe.Hub.API
                 {
                     Type = "oauth2",
                     Flow = "implicit",
-                    AuthorizationUrl = Configuration["AuthType"] == "Azure" ? Configuration["AzureAd:AuthorizationUrl"] : Configuration["Keycloak:AuthorizationUrl"],
+                    AuthorizationUrl = Configuration["AuthType"] == "AzureAD" ?
+                        Configuration["AzureAD:AuthorizationUrl"] :
+                        Configuration["Keycloak:Instance"] + Configuration["Keycloak:AuthorizationPath"],
                     Scopes = new Dictionary<string, string>
                     {
                         { "openid", "openid login scope" },
@@ -112,19 +114,13 @@ namespace Gcpe.Hub.API
         public virtual void ConfigureAzureAuth(IServiceCollection services)
         {
             services.AddAuthentication(AzureADDefaults.BearerAuthenticationScheme)
-                .AddAzureADBearer(options => Configuration.Bind("AzureAd", options));
+                .AddAzureADBearer(options => Configuration.Bind("AzureAD", options));
 
             services.Configure<JwtBearerOptions>(AzureADDefaults.JwtBearerAuthenticationScheme, options =>
             {
                 options.Authority = options.Authority + "/v2.0/";
                 options.TokenValidationParameters.ValidAudiences = new string[] { options.Audience, $"api://{options.Audience}" };
                 options.TokenValidationParameters.IssuerValidator = AadIssuerValidator.ValidateAadIssuer;
-            });
-
-            services.AddAuthorization(options =>
-            {
-                options.AddPolicy("ReadAccess", policy => policy.RequireRole("Viewer", "Contributor"));
-                options.AddPolicy("WriteAccess", policy => policy.RequireRole("Contributor"));
             });
         }
 
@@ -136,14 +132,17 @@ namespace Gcpe.Hub.API
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer(o =>
             {
-                o.Authority = Configuration["Keycloak:Authority"];
+                o.Authority = Configuration["Keycloak:Instance"] + Configuration["Keycloak:AuthorityPath"];
                 o.Audience = Configuration["Keycloak:Audience"];
                 o.TokenValidationParameters = new TokenValidationParameters
                 {
                     RoleClaimType = "user_roles"
                 };
             });
+        }
 
+        public virtual void ConfigureAuthorizationPolicies(IServiceCollection services)
+        {
             services.AddAuthorization(options =>
             {
                 options.AddPolicy("ReadAccess", policy => policy.RequireRole("Viewer", "Contributor"));
@@ -188,7 +187,7 @@ namespace Gcpe.Hub.API
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
-                c.OAuthClientId(Configuration["AuthType"] == "Azure" ? Configuration["AzureAd:ClientId"] : Configuration["Keycloak:Audience"]);
+                c.OAuthClientId(Configuration["AuthType"] == "AzureAD" ? Configuration["AzureAD:ClientId"] : Configuration["Keycloak:Audience"]);
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "BC Gov Hub API service");
             });
         }
