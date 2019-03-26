@@ -41,7 +41,7 @@ namespace Gcpe.Hub.API.Controllers
                 if (dbUserMinistryPrefs.Any())
                     return Ok(dbUserMinistryPrefs.Select(p => p.Ministry.Key).ToList());
 
-                return NotFound($"Could not find preferences for user with email address: {email}");
+                return Ok(dbUserMinistryPrefs);
             }
             catch (Exception ex)
             {
