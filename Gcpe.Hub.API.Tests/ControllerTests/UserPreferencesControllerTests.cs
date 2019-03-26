@@ -67,21 +67,6 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
         }
 
         [Fact]
-        public void Get_ShouldReturnNotFound()
-        {
-            var testDbUserMinistryPreference = TestData.CreateUserMinistryPreference();
-            context.UserMinistryPreference.Add(testDbUserMinistryPreference);
-            context.SaveChanges();
-
-            var token = generateToken(TokenType.Valid, "no_prefs@gov.bc.ca", "No Prefs User");
-            controller.Request.Headers["Authorization"] = $"Bearer {token}";
-
-            var result = controller.GetUserMinistryPreferences() as ObjectResult;
-            result.Should().BeOfType<NotFoundObjectResult>();
-            result.StatusCode.Should().Be(404);
-        }
-
-        [Fact]
         public void Get_ShouldReturnBadRequest()
         {
             var testDbUserMinistryPreference = TestData.CreateUserMinistryPreference();
