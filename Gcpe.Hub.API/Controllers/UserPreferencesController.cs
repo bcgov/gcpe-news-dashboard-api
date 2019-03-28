@@ -49,7 +49,7 @@ namespace Gcpe.Hub.API.Controllers
         }
 
         [HttpPost]
-        [Authorize(Policy = "WriteAccess")]
+        [Authorize(Policy = "ReadAccess")]
         [ProducesResponseType(typeof(string[]), 201)]
         [ProducesResponseType(400)]
         public IActionResult AddUserMinistryPreference(string[] ministryKeys)
