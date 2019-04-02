@@ -66,10 +66,6 @@ namespace Gcpe.Hub.API.Controllers
                 {
                     Request.GetTypedHeaders().IfModifiedSince = null; // force refresh after midnight
                 }
-                if (mostFutureForecastActivity.HasValue)
-                {
-                    today = mostFutureForecastActivity.Value.AddDays(today.DayOfWeek - mostFutureForecastActivity.Value.DayOfWeek - 13 * 7); // 13 weeks before the most future activity for testing with a stale db
-                }
                 forecast = forecast.Where(a => a.StartDateTime >= today && a.StartDateTime < today.AddDays(numDays));
 
                 IActionResult res = HandleModifiedSince(ref lastModified, ref lastModifiedNextCheck, () => forecast.OrderByDescending(a => a.LastUpdatedDateTime).FirstOrDefault()?.LastUpdatedDateTime);
