@@ -40,6 +40,7 @@ namespace Gcpe.Hub.API.Controllers
             return dbContext.NewsRelease.Include(p => p.Ministry).Include(p => p.NewsReleaseLanguage).Include(p => p.NewsReleaseMinistry)
                 .Include(p => p.NewsReleaseDocument).ThenInclude(nrd => nrd.NewsReleaseDocumentLanguage)
                 .Include(p => p.NewsReleaseDocument).ThenInclude(nrd => nrd.NewsReleaseDocumentContact)
+                .Include(p => p.NewsReleaseMinistry)
                 .Where(p => p.IsCommitted);
         }
         [NonAction]
