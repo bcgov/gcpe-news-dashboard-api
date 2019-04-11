@@ -54,6 +54,7 @@ namespace Gcpe.Hub.API.Helpers
             model.LeadMinistryName = dbPost.Ministry?.DisplayName;
             model.Documents = documents;
             model.MinistryKeys = dbPost.NewsReleaseMinistry.Select(m => m.Release.Key).ToList();
+            model.Ministries = dbPost.NewsReleaseMinistry.Select(m => m.MinistryId.ToString()).ToList();
 
             return model;
         }
