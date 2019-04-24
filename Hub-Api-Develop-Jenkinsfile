@@ -17,3 +17,12 @@ node('master') {
       }
     }
 }
+
+timeout(600) {
+  stage('Deploy on Prod') {
+      input "Deploy to Prod?"
+      node('master') {
+          openshiftTag destStream: 'hub-api', verbose: 'true', destTag: 'prod', srcStream: 'hub-api', srcTag: 'test'
+      }
+  }
+}
