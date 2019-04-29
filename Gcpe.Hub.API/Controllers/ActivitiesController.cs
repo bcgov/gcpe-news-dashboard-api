@@ -55,13 +55,14 @@ namespace Gcpe.Hub.API.Controllers
         [Produces(typeof(IEnumerable<Models.Activity>))]
         [ProducesResponseType(304)]
         [ProducesResponseType(400)]
-        [ResponseCache(Duration = 60)]
+        [ResponseCache(Duration = 5)]
         public IActionResult GetActivityForecast(int numDays)
         {
             try
             {
                 IQueryable<Activity> forecast = Forecast(dbContext);
-                var today = DateTime.Today;
+                //var today = DateTime.Today;
+                var today = new DateTime(2019, 4, 12);
                 if (lastModifiedNextCheck.Date != today)
                 {
                     Request.GetTypedHeaders().IfModifiedSince = null; // force refresh after midnight
