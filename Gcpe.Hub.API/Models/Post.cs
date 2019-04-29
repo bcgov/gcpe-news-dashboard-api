@@ -41,7 +41,7 @@ namespace Gcpe.Hub.API.Models
         public string LeadMinistryKey { get; set; }
         public string LeadMinistryName { get; set; }
         public IEnumerable<string> MinistryKeys { get; set; }
-
+        public IEnumerable<string> Ministries { get; set; }
         public DateTimeOffset? PublishDateTime { get; set; }
         public bool IsCommitted { get; set; }
         public string AssetUrl { get; set; }
