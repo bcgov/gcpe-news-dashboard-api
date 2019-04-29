@@ -61,8 +61,7 @@ namespace Gcpe.Hub.API.Controllers
             try
             {
                 IQueryable<Activity> forecast = Forecast(dbContext);
-                //var today = DateTime.Today;
-                var today = new DateTime(2019, 4, 12);
+                var today = DateTime.Today;
                 if (lastModifiedNextCheck.Date != today)
                 {
                     Request.GetTypedHeaders().IfModifiedSince = null; // force refresh after midnight
