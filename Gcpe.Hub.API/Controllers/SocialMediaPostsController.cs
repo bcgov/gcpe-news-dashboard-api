@@ -36,7 +36,7 @@ namespace Gcpe.Hub.API.Controllers
         {
             try
             {
-                IQueryable<SocialMediaPost> dbPosts = dbContext.SocialMediaPost;
+                IQueryable<SocialMediaPost> dbPosts = dbContext.SocialMediaPost.Where(p => p.Timestamp >= DateTime.Now.AddDays(-14));
 
                 IActionResult res = HandleModifiedSince(ref lastModified, ref lastModifiedNextCheck, () => dbPosts.OrderByDescending(p => p.Timestamp).FirstOrDefault()?.Timestamp);
                 return res ?? Ok(mapper.Map<List<Models.SocialMediaPost>>(dbPosts.Where(p => p.IsActive).OrderBy(p => p.SortOrder).ThenByDescending(p => p.Timestamp).ToList()));

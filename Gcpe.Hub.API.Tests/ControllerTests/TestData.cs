@@ -110,14 +110,14 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             };
         }
 
-        public static SocialMediaPost CreateDbSocialMediaPost(string url, Guid? id = null, bool isActive = true, int sortOrder = 0)
+        public static SocialMediaPost CreateDbSocialMediaPost(string url, Guid? id = null, bool isActive = true, int sortOrder = 0, DateTime? timestamp = null)
         {
             return new SocialMediaPost
             {
                 Id = id ?? Guid.Empty,
                 Url = url,
                 SortOrder = sortOrder,
-                Timestamp = DateTime.Now,
+                Timestamp = timestamp ?? DateTime.Now,
                 IsActive = isActive
             };
         }

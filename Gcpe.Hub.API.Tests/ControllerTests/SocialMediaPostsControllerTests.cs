@@ -85,6 +85,35 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             models.Count().Should().Be(0);
         }
 
+
+        [Fact]
+        public void GetAll_ShouldntReturnPostsOlderThanTwoWeeks()
+        {
+            for (var i = 0; i < 3; i++)
+            {
+                context.SocialMediaPost.Add(TestData.CreateDbSocialMediaPost("http://facebook.com/post/123", Guid.NewGuid(), true));
+            }
+            context.SocialMediaPost.Add(TestData.CreateDbSocialMediaPost("http://facebook.com/post/123", Guid.NewGuid(), true, 0, DateTime.Now.AddDays(-14)));
+            context.SocialMediaPost.Add(TestData.CreateDbSocialMediaPost("http://facebook.com/post/123", Guid.NewGuid(), true, 0, DateTime.Now.AddDays(-14)));
+            context.SaveChanges();
+
+            var result = controller.GetAllSocialMediaPosts() as ObjectResult;
+
+            result.Should().BeOfType<OkObjectResult>();
+            result.StatusCode.Should().Be(200);
+            result.Should().NotBeNull();
+
+            var models = result.Value as ICollection<Models.SocialMediaPost>;
+            models.Should().NotBeNull();
+            models.Count().Should().Be(3);
+
+            foreach (var post in models)
+            {
+                var postLastModifiedLessThanTwoWeeksAgo = post.Timestamp >= DateTime.Now.AddDays(-14);
+                postLastModifiedLessThanTwoWeeksAgo.Should().BeTrue();
+            }
+        }
+
         [Fact]
         public void GetAll_ShouldReturnBadRequest()
         {
@@ -164,7 +193,7 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             var testDbPost = TestData.CreateDbSocialMediaPost("http://facebook.com/post/123");
             context.SocialMediaPost.Add(testDbPost);
             context.SaveChanges();
-       
+
             var result = controller.GetSocialMediaPost(testDbPost.Id) as ObjectResult;
 
             result.Should().BeOfType<BadRequestObjectResult>();
