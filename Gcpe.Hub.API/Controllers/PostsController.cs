@@ -89,7 +89,11 @@ namespace Gcpe.Hub.API.Controllers
                              join Activity a in dbContext.Activity on p.ActivityId equals a.Id
                              where p.ReleaseType <= ReleaseType.Story
                              && p.PublishDateTime >= today.AddDays(-numDays)
-                             && a.ActivityKeywords.Any(k => k.Keyword.Name == "HQ-1P" || k.Keyword.Name == "HQ-2PT")
+                             && a.ActivityKeywords.Any(
+                                k => k.Keyword.Name == "HQ-1P"
+                                || k.Keyword.Name == "HQ-2PT"
+                                || k.Keyword.Name == "HQ-DB"
+                             )
                              select p;
 
                 if (lastModifiedNextCheck.Date != today)
