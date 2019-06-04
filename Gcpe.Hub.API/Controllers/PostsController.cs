@@ -82,8 +82,15 @@ namespace Gcpe.Hub.API.Controllers
             {
                 var today = DateTime.Today;
 
-                IQueryable<NewsRelease> latest = QueryPosts().Where(p => p.ReleaseType <= ReleaseType.Story && p.PublishDateTime >= today.AddDays(-numDays)); // Releases or Stories
-                                                              //: QueryPosts().Where(p => p.ReleaseType <= ReleaseType.Story).OrderByDescending(p => p.PublishDateTime).Take(20); // 20 for testing with a stale db
+                // IQueryable<NewsRelease> latest = QueryPosts().Where(p => p.ReleaseType <= ReleaseType.Story && p.PublishDateTime >= today.AddDays(-numDays)); // Releases or Stories
+                //: QueryPosts().Where(p => p.ReleaseType <= ReleaseType.Story).OrderByDescending(p => p.PublishDateTime).Take(20); // 20 for testing with a stale db
+
+                var latest = from p in QueryPosts()
+                             join Activity a in dbContext.Activity on p.ActivityId equals a.Id
+                             where p.ReleaseType <= ReleaseType.Story
+                             && p.PublishDateTime >= today.AddDays(-numDays)
+                             && a.ActivityKeywords.Any(k => k.Keyword.Name == "HQ-1P" || k.Keyword.Name == "HQ-2PT")
+                             select p;
 
                 if (lastModifiedNextCheck.Date != today)
                 {
