@@ -92,7 +92,7 @@ namespace Gcpe.Hub.API.Controllers
                              && a.ActivityKeywords.Any(
                                 k => k.Keyword.Name == "HQ-1P"
                                 || k.Keyword.Name == "HQ-2PT"
-                                || k.Keyword.Name == "HQ-DB"
+                                || k.Keyword.Name == "DB"
                              )
                              select p;
 
