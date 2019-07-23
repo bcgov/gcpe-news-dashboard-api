@@ -47,7 +47,9 @@ namespace Gcpe.Hub.API.Controllers
         private IQueryable<Activity> Forecast(HubDbContext dbContext)
         {
             return QueryAll(dbContext)
-                .Where(a => a.IsConfirmed && !a.IsConfidential && a.ActivityKeywords.Any(ak => ak.Keyword.Name == "HQ-1P" || ak.Keyword.Name == "DB"));
+                .Where(a => a.IsConfirmed && !a.IsConfidential && a.ActivityKeywords.Any(ak => ak.Keyword.Name == "HQ-1P"|| ak.Keyword.Name == "DB")
+                    || !a.IsConfirmed && !a.IsConfidential && a.StartDateTime.Value.Date == a.EndDateTime.Value.Date && !a.IsAllDay
+                    && a.ActivityKeywords.Any(ak => ak.Keyword.Name == "HQ-1P" || ak.Keyword.Name == "DB"));
         }
 
         [HttpGet("Forecast/{numDays}")]
