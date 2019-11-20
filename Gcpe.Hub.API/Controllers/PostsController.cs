@@ -91,7 +91,6 @@ namespace Gcpe.Hub.API.Controllers
                              && p.PublishDateTime >= today.AddDays(-numDays)
                              && a.ActivityKeywords.Any(
                                 k => k.Keyword.Name == "HQ-1P"
-                                || k.Keyword.Name == "HQ-2PT"
                                 || k.Keyword.Name == "DB"
                              )
                              select p;
