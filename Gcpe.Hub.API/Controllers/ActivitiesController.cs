@@ -49,7 +49,11 @@ namespace Gcpe.Hub.API.Controllers
             return QueryAll(dbContext)
                 .Where(a => a.IsConfirmed && !a.IsConfidential && a.ActivityKeywords.Any(ak => ak.Keyword.Name == "HQ-1P"|| ak.Keyword.Name == "DB")
                     || !a.IsConfirmed && !a.IsConfidential && a.StartDateTime.Value.Date == a.EndDateTime.Value.Date && !a.IsAllDay
-                    && a.ActivityKeywords.Any(ak => ak.Keyword.Name == "HQ-1P" || ak.Keyword.Name == "DB"));
+                    && a.ActivityKeywords.Any(ak => ak.Keyword.Name == "HQ-1P" || ak.Keyword.Name == "DB")
+                    || a.IsConfirmed && a.IsConfidential && a.HqSection != 4 && a.ActivityKeywords.Any(ak => ak.Keyword.Name == "HQ-1P" || ak.Keyword.Name == "DB")
+                    || !a.IsConfirmed && a.IsConfidential && a.HqSection != 4 && a.StartDateTime.Value.Date == a.EndDateTime.Value.Date && !a.IsAllDay
+                    && a.ActivityKeywords.Any(ak => ak.Keyword.Name == "HQ-1P" || ak.Keyword.Name == "DB")
+                    );
         }
 
         [HttpGet("Forecast/{numDays}")]
