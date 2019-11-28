@@ -37,8 +37,10 @@ namespace Gcpe.Hub.API.Models
         public string OtherCity { get; set; }
         public bool IsActive { get; set; }
         public bool IsConfirmed { get; set; }
+        public bool IsConfidential { get; set; }
         public bool IsIssue { get; set; }
         public bool IsAllDay { get; set; }
+        public int HqSection { get; set; }
         public DateTime? NrDateTime { get; set; }
         public DateTime? LastUpdatedDateTime { get; set; }
         public ICollection<string> Categories { get; set; }
