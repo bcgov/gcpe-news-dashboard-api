@@ -23,29 +23,32 @@ using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi.Models;
+using System;
 
 namespace Gcpe.Hub.API
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration, IHostingEnvironment env)
+        public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
             Configuration = configuration;
             Environment = env;
         }
 
         private IConfiguration Configuration { get; }
-        private IHostingEnvironment Environment { get; }
+        private IWebHostEnvironment Environment { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddAutoMapper();
+            services.AddAutoMapper(typeof(Startup));
 
             services.AddDbContext<HubDbContext>(options => options.UseSqlServer(Configuration["HubDbContext"])
                 .ConfigureWarnings(warnings => warnings.Throw(RelationalEventId.QueryClientEvaluationWarning)));
 
-            if(Configuration["AuthType"] == "AzureAD")
+            if (Configuration["AuthType"] == "AzureAD")
             {
                 this.ConfigureAzureAuth(services);
             }
@@ -55,35 +58,47 @@ namespace Gcpe.Hub.API
             }
             this.ConfigureAuthorizationPolicies(services);
 
-            services.AddMvc()
-                .AddJsonOptions(opt => {
+            services.AddMvc(opt =>
+            {
+                opt.EnableEndpointRouting = false;
+            })
+                .AddNewtonsoftJson(opt =>
+                {
                     opt.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
                     opt.SerializerSettings.DateTimeZoneHandling = DateTimeZoneHandling.Local;
                 })
-                .SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+                .SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
 
 
             services.AddSwaggerGen(setupAction =>
             {
-                setupAction.SwaggerDoc("v1", new Info
+                setupAction.SwaggerDoc("v1", new OpenApiInfo
                 {
                     Version = "Alpha",
                     Title = "BC Gov Hub API service",
                     Description = "The .Net Core API for the Hub"
                 });
-                setupAction.AddSecurityDefinition("oauth2", new OAuth2Scheme
+                setupAction.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
                 {
-                    Type = "oauth2",
-                    Flow = "implicit",
-                    AuthorizationUrl = Configuration["AuthType"] == "AzureAD" ?
-                        Configuration["AzureAD:AuthorizationUrl"] :
-                        Configuration["Keycloak:Instance"] + Configuration["Keycloak:AuthorizationPath"],
-                    Scopes = new Dictionary<string, string>
+                    Type = SecuritySchemeType.OAuth2,
+                    Flows = new OpenApiOAuthFlows
                     {
-                        { "openid", "openid login scope" },
-                        { "profile", "profile scope" },
-                        { "email", "email scope" },
-                    }
+                        Implicit = new OpenApiOAuthFlow
+                        {
+                            AuthorizationUrl = Configuration["AuthType"] == "AzureAD" ?
+                        new Uri(Configuration["AzureAD:AuthorizationUrl"]) :
+                        new Uri(Configuration["Keycloak:Instance"] + Configuration["Keycloak:AuthorizationPath"]),
+
+                            Scopes = new Dictionary<string, string>
+                            {
+                                { "openid", "openid login scope" },
+                                { "profile", "profile scope" },
+                                { "email", "email scope" },
+                            }
+
+                        }
+                    },
+
                 });
                 setupAction.OperationFilter<SecurityRequirementsOperationFilter>();
                 setupAction.OperationFilter<OperationIdCorrectionFilter>();
@@ -152,7 +167,7 @@ namespace Gcpe.Hub.API
 
         private class OperationIdCorrectionFilter : IOperationFilter
         { // GetActivity() instead of ApiActivitiesByIdGet()
-            public void Apply(Operation operation, OperationFilterContext context)
+            public void Apply(OpenApiOperation operation, OperationFilterContext context)
             {
                 if (context.ApiDescription.ActionDescriptor is ControllerActionDescriptor actionDescriptor)
                 {
@@ -162,7 +177,7 @@ namespace Gcpe.Hub.API
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IHostEnvironment env)
         {
             if (env.IsDevelopment())
             {

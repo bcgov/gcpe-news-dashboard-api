@@ -55,7 +55,7 @@ namespace Gcpe.Hub.API.Controllers
         [Authorize(Policy = "ReadAccess")]
         [ProducesResponseType(typeof(string[]), 201)]
         [ProducesResponseType(400)]
-        public IActionResult AddUserMinistryPreference(string[] ministryKeys)
+        public IActionResult AddUserMinistryPreference([FromQuery] string[] ministryKeys)
         {
             try
             {
