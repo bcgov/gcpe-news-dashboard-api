@@ -28,11 +28,11 @@ namespace Gcpe.Hub.API.Controllers
         public PostsController(HubDbContext dbContext,
             ILogger<PostsController> logger,
             IMapper mapper,
-            IHostingEnvironment env) : base(logger)
+            IWebHostEnvironment env) : base(logger)
         {
             this.dbContext = dbContext;
             this.mapper = mapper;
-            this.isProduction = env?.IsProduction() != false;
+            this.isProduction = false;// env?.IsProduction() != false;
         }
 
         private IQueryable<NewsRelease> QueryPosts()

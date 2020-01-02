@@ -48,7 +48,13 @@ namespace Gcpe.Hub.API.Tests.ControllerTests
             //-----------------------------------------------------------------------------------------------------------
             NewsRelease post = TestData.CreateDbPost();
             context.NewsRelease.Add(post);
-            post.NewsReleaseLog = TestData.CreateDbPostLogs(post);
+            // line 52 caused the test to fail after the update to EF core 3.0
+            // post.NewsReleaseLog = TestData.CreateDbPostLogs(post);
+            // lines 54 to 56 replace the problematic line 52 by saving the logs before adding them to the parent post
+            var logs = TestData.CreateDbPostLogs(post);
+            context.AddRange(logs);
+            context.SaveChanges();
+            post.NewsReleaseLog = logs;
             var expectedLogEntry = post.NewsReleaseLog.FirstOrDefault();
             var expectedCount = post.NewsReleaseLog.Count;
             context.SaveChanges();

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Gcpe.Hub.API.Controllers
@@ -27,7 +28,7 @@ namespace Gcpe.Hub.API.Controllers
         public ActivitiesController(HubDbContext dbContext,
             ILogger<ActivitiesController> logger,
             IMapper mapper,
-            IHostingEnvironment env) : base(logger)
+            IHostEnvironment env) : base(logger)
         {
             this.dbContext = dbContext;
             this.mapper = mapper;

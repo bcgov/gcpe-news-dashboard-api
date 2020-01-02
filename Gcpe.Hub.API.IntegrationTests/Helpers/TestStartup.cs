@@ -5,12 +5,13 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Gcpe.Hub.API.IntegrationTests
 {
     public class TestStartup : Startup
     {
-        public TestStartup(IConfiguration configuration, IHostingEnvironment env) : base(configuration, env)
+        public TestStartup(IConfiguration configuration, IWebHostEnvironment env) : base(configuration, env)
         {
         }
 
