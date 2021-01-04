@@ -17,3 +17,36 @@ node('master') {
       }
     }
 }
+
+
+node('master') {
+	stage('Build Image') {
+		openshift.withCluster() {
+      openshift.withProject() {
+        echo "building..."
+			  def bc = openshift.selector('bc', 'hub-api-develop')
+			  def buildSelector = bc.startBuild()
+			  openshift.tag("hub-api-develop:latest", "hub-api:dev")
+			  openshift.tag("hub-api:latest", "hub-api:test")
+      }
+    }
+	}
+
+	stage('Deploy on Dev') {
+		openshift.withCluster() {
+      openshift.withProject("05e933-dev") {
+		    echo "Deploying to dev..."
+			  openshift.selector("dc", "hub-api").rollout().latest()
+		  }
+		}
+	}
+
+	stage('Deploy on Test') {
+    input "Deploy to test?"
+		openshift.withCluster() {
+      openshift.withProject("05e933-test") {
+			  openshift.selector("dc", "hub-api").rollout().latest()
+		  }
+		}
+	}
+}
