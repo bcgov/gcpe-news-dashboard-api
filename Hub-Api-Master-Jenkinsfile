@@ -5,8 +5,9 @@ node('master') {
         echo "building..."
 			  def bc = openshift.selector('bc', 'hub-api-master')
 			  def buildSelector = bc.startBuild('--follow')
-			  openshift.tag("hub-api-master:latest", "hub-api:test")
-			  openshift.tag("hub-api-master:latest", "hub-api:prod")
+        openshift.tag("hub-api-master:latest", "hub-api:MASTER-$BUILD_ID")
+			  openshift.tag("hub-api:MASTER-$BUILD_ID", "hub-api:test")
+			  openshift.tag("hub-api:MASTER-$BUILD_ID", "hub-api:prod")
       }
     }
 	}
