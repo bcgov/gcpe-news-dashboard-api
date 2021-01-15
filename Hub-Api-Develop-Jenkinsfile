@@ -1,19 +1,32 @@
 node('master') {
-    stage('Build Image') {
-        echo "Building..."
-        openshiftBuild bldCfg: 'hub-api-develop', showBuildLogs: 'true'
-        openshiftTag destStream: 'hub-api', verbose: 'true', destTag: 'DEVELOP-$BUILD_ID', srcStream: 'hub-api-develop', srcTag: 'latest'
-    }
-
-    stage('Deploy on Dev') {
-        echo "Deploying to dev..."
-        openshiftTag destStream: 'hub-api', verbose: 'true', destTag: 'dev', srcStream: 'hub-api', srcTag: 'DEVELOP-$BUILD_ID'
-    }
-
-    timeout(600) {
-        stage('Deploy on Test') {
-            input "Deploy to test?"
-          openshiftTag destStream: 'hub-api', verbose: 'true', destTag: 'test', srcStream: 'hub-api', srcTag: 'dev'
+	stage('Build Image') {
+		openshift.withCluster() {
+      openshift.withProject() {
+        echo "building..."
+			  def bc = openshift.selector('bc', 'hub-api-develop')
+			  def buildSelector = bc.startBuild('--follow')
+        openshift.tag("hub-api-develop:latest", "hub-api:DEVELOP-$BUILD_ID")
+			  openshift.tag("hub-api:DEVELOP-$BUILD_ID", "hub-api:dev")
+			  openshift.tag("hub-api:DEVELOP-$BUILD_ID", "hub-api:test")
       }
     }
+	}
+
+	stage('Deploy on Dev') {
+		openshift.withCluster() {
+      openshift.withProject("05e933-dev") {
+		    echo "Deploying to dev..."
+			  openshift.selector("dc", "hub-api").rollout().latest()
+		  }
+		}
+	}
+
+	stage('Deploy on Test') {
+    input "Deploy to test?"
+		openshift.withCluster() {
+      openshift.withProject("05e933-test") {
+			  openshift.selector("dc", "hub-api").rollout().latest()
+		  }
+		}
+	}
 }
