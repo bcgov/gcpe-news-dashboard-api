@@ -38,7 +38,7 @@
               "uri": "${GIT_REPO_URL}",
               "ref": "${GIT_REF}"
             },
-            "contextDir": "${SOURCE_CONTEXT_DIR}"          
+            "contextDir": "${SOURCE_CONTEXT_DIR}"
           },
           "strategy":
           {
@@ -48,7 +48,7 @@
               "from":
               {
                 "kind": "${SOURCE_IMAGE_KIND}",
-                "name": "${SOURCE_IMAGE_NAME}:${SOURCE_IMAGE_TAG}"              
+                "name": "${SOURCE_IMAGE_NAME}:${SOURCE_IMAGE_TAG}"
               },
               "env": [
                 {
@@ -160,7 +160,7 @@
         "description": "The resources Memory limit (in Mi, Gi, etc) for this build.",
         "required": true,
         "value": "6Gi"
-      },   
+      },
       {
         "name": "CPU_REQUEST",
         "displayName": "Resources CPU Request",
@@ -179,7 +179,7 @@
         "name": "SONAR_TOKEN",
         "displayName": "SonarQube Token",
         "description": "The SonarQube user token",
-        "required": true,
+        "required": false,
         "value": ""
       },
       {
@@ -195,6 +195,6 @@
         "description": "The SonarQube URL",
         "required": true,
         "value": "http://sonarqube-gcpe-news-tools.pathfinder.gov.bc.ca"
-      } 	
+      }
     ]
   }
