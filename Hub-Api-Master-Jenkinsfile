@@ -20,8 +20,9 @@ node('master') {
 		  }
 		}
 	}
-
-	stage('Deploy on Prod') {
+  timeout(1600)
+  {
+    stage('Deploy on Prod') {
     input "Deploy to prod?"
 		openshift.withCluster() {
       openshift.withProject("05e933-prod") {
@@ -29,4 +30,6 @@ node('master') {
 		  }
 		}
 	}
+  }
+
 }
