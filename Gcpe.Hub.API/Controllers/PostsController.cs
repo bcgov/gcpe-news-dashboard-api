@@ -71,7 +71,7 @@ namespace Gcpe.Hub.API.Controllers
             }
         }
 
-        [HttpGet("Latest/{numDays}")]
+        [HttpGet("Latest/{numberDays}")]
         [Produces(typeof(IEnumerable<Models.Post>))]
         [ProducesResponseType(304)]
         [ProducesResponseType(400)]
