@@ -46,8 +46,9 @@ namespace Gcpe.Hub.API
         {
             services.AddAutoMapper(typeof(Startup));
 
-            services.AddDbContext<HubDbContext>(options => options.UseSqlServer(Configuration["HubDbContext"])
-                .ConfigureWarnings(warnings => warnings.Throw(RelationalEventId.QueryClientEvaluationWarning)));
+            services.AddDbContext<HubDbContext>(options => options.UseSqlServer(Configuration["HubDbContext"]));
+            // deprecated in ef core 5.0
+            //.ConfigureWarnings(warnings => warnings.Throw(RelationalEventId.QueryClientEvaluationWarning)));
 
             if (Configuration["AuthType"] == "AzureAD")
             {
